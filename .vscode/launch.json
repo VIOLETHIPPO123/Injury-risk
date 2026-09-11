@@ -2,25 +2,27 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Frontend: Vite dev server",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "npm run dev",
-      "cwd": "${workspaceFolder}/frontend"
-    },
-    {
-      "name": "Backend: Spring Boot",
       "type": "java",
+      "name": "Run Spring Boot Backend",
       "request": "launch",
       "mainClass": "com.sidelined.backend.BackendApplication",
       "projectName": "backend",
       "cwd": "${workspaceFolder}/backend"
+    },
+    {
+      "type": "node",
+      "name": "Run React Frontend",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "${workspaceFolder}/frontend",
+      "console": "integratedTerminal"
     }
   ],
   "compounds": [
     {
-      "name": "Full stack (backend + frontend)",
-      "configurations": ["Backend: Spring Boot", "Frontend: Vite dev server"]
+      "name": "Run Full Stack",
+      "configurations": ["Run Spring Boot Backend", "Run React Frontend"]
     }
   ]
 }
