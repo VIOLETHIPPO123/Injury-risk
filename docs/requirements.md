@@ -49,7 +49,7 @@
    4. Given I want to control noise, when I go to notification settings, then I can turn risk-score alerts on/off independently of other notification types.
    5. Given a player's risk score fluctuates rapidly near the threshold, when multiple crossings occur in a short period, then notifications are throttled/deduplicated (e.g., max one alert per player per X hours) to avoid spamming the user.
 
-4. As a user, I want a plain-language explainer of what ACWR means, so that I don't need a sports-science background to trust the score.
+4. As a user, I want a plain-language explainer of what "ACWR" means, so that I don't need a sports-science background to trust the score.
 
    **Acceptance Criteria:**
    1. Given I see "ACWR" or a risk score derived from it anywhere in the UI, when I tap/click an info icon or the term itself, then a plain-language explanation appears (tooltip or modal) without leaving the current screen.
