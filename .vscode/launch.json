@@ -5,7 +5,7 @@
       "type": "java",
       "name": "Run Spring Boot Backend",
       "request": "launch",
-      "mainClass": "com.Injury-risk.backend.BackendApplication",
+      "mainClass": "com.sidelined.backend.BackendApplication",
       "projectName": "backend",
       "cwd": "${workspaceFolder}/backend"
     },

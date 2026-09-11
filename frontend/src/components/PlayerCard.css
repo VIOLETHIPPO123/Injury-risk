@@ -1,0 +1,102 @@
+.player-card {
+  --risk-safe: #15803d;
+  --risk-caution: #b45309;
+  --risk-high: #b91c1c;
+  --risk-muted: #6b7280;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  text-align: left;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  transition: box-shadow 0.3s;
+
+  &:hover {
+    box-shadow: var(--shadow);
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .player-card {
+    --risk-safe: #4ade80;
+    --risk-caution: #fbbf24;
+    --risk-high: #f87171;
+    --risk-muted: #9ca3af;
+  }
+}
+
+.player-card-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+
+  h2 {
+    margin: 0;
+  }
+
+  .team {
+    font-family: var(--mono);
+    font-size: 14px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: var(--text-h);
+    background: var(--code-bg);
+    flex-shrink: 0;
+  }
+}
+
+.acwr {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 12px;
+  border-left: 3px solid currentcolor;
+
+  .acwr-value {
+    font-family: var(--mono);
+    font-size: 32px;
+    line-height: 110%;
+  }
+
+  .acwr-label {
+    font-size: 15px;
+  }
+}
+
+.risk-safe {
+  color: var(--risk-safe);
+}
+.risk-caution {
+  color: var(--risk-caution);
+}
+.risk-high {
+  color: var(--risk-high);
+}
+.risk-low,
+.risk-unknown {
+  color: var(--risk-muted);
+}
+
+.snaps {
+  display: flex;
+  gap: 24px;
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+
+  dt {
+    font-size: 14px;
+    color: var(--text);
+  }
+
+  dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--text-h);
+  }
+}
