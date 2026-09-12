@@ -9,12 +9,15 @@ function calculateAcwr(snapsLastGame, snapsLast4Games) {
   return snapsLastGame / chronic
 }
 
+// tier drives both the text color and the card's background tint —
+// under-training and slightly-elevated share "medium" because the risk
+// doc treats both as cautionary, just from opposite directions.
 function riskLevel(acwr) {
-  if (acwr === null) return { label: 'Not enough data', className: 'risk-unknown' }
-  if (acwr < 0.8) return { label: 'Ramping up', className: 'risk-low' }
-  if (acwr <= 1.3) return { label: 'Normal workload', className: 'risk-safe' }
-  if (acwr <= 1.5) return { label: 'Slightly elevated', className: 'risk-caution' }
-  return { label: 'Spiking — high risk', className: 'risk-high' }
+  if (acwr === null) return { label: 'Not enough data', tier: 'unknown' }
+  if (acwr < 0.8) return { label: 'Ramping up', tier: 'medium' }
+  if (acwr <= 1.3) return { label: 'Normal workload', tier: 'low' }
+  if (acwr <= 1.5) return { label: 'Slightly elevated', tier: 'medium' }
+  return { label: 'Spiking — high risk', tier: 'high' }
 }
 
 function PlayerCard({ name, team, snapsLastGame, snapsLast4Games }) {
@@ -22,13 +25,13 @@ function PlayerCard({ name, team, snapsLastGame, snapsLast4Games }) {
   const risk = riskLevel(acwr)
 
   return (
-    <article className="player-card">
+    <article className={`player-card risk-${risk.tier}`}>
       <header className="player-card-header">
         <h2>{name}</h2>
         <span className="team">{team}</span>
       </header>
 
-      <div className={`acwr ${risk.className}`}>
+      <div className={`acwr risk-${risk.tier}`}>
         <span className="acwr-value">{acwr === null ? '—' : acwr.toFixed(2)}</span>
         <span className="acwr-label">{risk.label}</span>
       </div>
