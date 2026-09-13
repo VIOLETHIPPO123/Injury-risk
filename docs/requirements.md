@@ -118,3 +118,29 @@
    **Alternate/Exception Flows:**
    1. Permission denied: If the user denies push permission, the system disables the alert toggle and displays a message explaining that alerts require notification access, with a link to device settings.
    2. No results after filtering: If the user has no players at the selected position, the system displays an empty-state message instead of a blank list.
+
+## Scope
+
+### In scope
+
+Features guaranteed for this semester's MVP:
+
+1. Player roster list with filtering by position and/or team.
+2. Full player list sortable by risk score (with a consistent tie-break and handling of missing data).
+3. Player search with real-time matching results.
+4. Player detail view showing current risk score, risk level (low/moderate/high), and underlying ACWR value.
+5. Plain-language ACWR explainer (info icon/tooltip or modal) accessible from any risk score in the UI, including a simple visual scale and basic accessibility support.
+6. Persisted filter/sort selections within a session.
+7. Single-league support via the web app (desktop and responsive browser).
+
+### Out of scope
+
+Features explicitly deferred past this semester's MVP:
+
+1. Push notifications / risk-score alerts (including OS-level permission prompts and throttling logic).
+2. Native mobile app.
+3. Heat-map visualization of risk across the league or roster.
+4. Multi-league support.
+5. Historical risk-score trend charts and advanced analytics.
+6. Automated trade or keeper recommendation engine.
+7. League-mate sharing or social features (e.g., sharing risk profiles to defend a trade).
