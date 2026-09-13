@@ -1,0 +1,10 @@
+.search-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+.no-results {
+  margin-top: 2rem;
+  color: #666;
+}

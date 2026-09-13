@@ -23,3 +23,5 @@ function SearchBar({ onSearch, placeholder = "Search players..." }) {
     />
   );
 }
+
+export default SearchBar;
