@@ -1,0 +1,17 @@
+.roster-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 24px;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 16px;
+  color: var(--accent);
+  cursor: pointer;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

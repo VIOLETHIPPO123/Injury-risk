@@ -3,6 +3,9 @@
   --risk-caution: #b45309;
   --risk-high: #b91c1c;
   --risk-muted: #6b7280;
+  --risk-bg-low: #15803d1f;
+  --risk-bg-medium: #b453091f;
+  --risk-bg-high: #b91c1c1f;
 
   display: flex;
   flex-direction: column;
@@ -12,10 +15,20 @@
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
-  transition: box-shadow 0.3s;
+  transition: box-shadow 0.3s, background 0.3s;
 
   &:hover {
     box-shadow: var(--shadow);
+  }
+
+  &.risk-low {
+    background: var(--risk-bg-low);
+  }
+  &.risk-medium {
+    background: var(--risk-bg-medium);
+  }
+  &.risk-high {
+    background: var(--risk-bg-high);
   }
 }
 
@@ -25,6 +38,9 @@
     --risk-caution: #fbbf24;
     --risk-high: #f87171;
     --risk-muted: #9ca3af;
+    --risk-bg-low: #4ade801f;
+    --risk-bg-medium: #fbbf241f;
+    --risk-bg-high: #f871711f;
   }
 }
 
@@ -67,16 +83,15 @@
   }
 }
 
-.risk-safe {
+.risk-low {
   color: var(--risk-safe);
 }
-.risk-caution {
+.risk-medium {
   color: var(--risk-caution);
 }
 .risk-high {
   color: var(--risk-high);
 }
-.risk-low,
 .risk-unknown {
   color: var(--risk-muted);
 }
