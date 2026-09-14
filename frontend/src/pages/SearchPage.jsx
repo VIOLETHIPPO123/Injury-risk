@@ -5,7 +5,7 @@ import RosterLink from "../components/RosterLink";
 import { filterPlayersByName } from "../utils/filterPlayers";
 import "./SearchPage.css";
 
-function SearchPage({ players, onBack }) {
+function SearchPage({ players = [], onBack }) {
   const [query, setQuery] = useState("");
 
   const filteredPlayers = useMemo(
