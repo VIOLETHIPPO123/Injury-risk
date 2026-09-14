@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import PlayerCard from "./components/PlayerCard";
 import RosterLink from "./components/RosterLink";
 import RostersPage from "./pages/RostersPage";
+import SearchPage from "./pages/SearchPage";
 import { getPlayers } from "./services/playerService";
 import "./App.css";
 import Header from "./components/Header";
@@ -39,19 +39,19 @@ function App() {
     content = <p>Couldn't load players: {error}</p>;
   } else if (view === "rosters") {
     content = <RostersPage players={players} onBack={() => setView("home")} />;
+  } else if (view === "search") {
+    content = <SearchPage players={players} onBack={() => setView("home")} />;
   } else {
     content = (
-      <>
+      <nav className="home-links">
         <RosterLink onClick={() => setView("rosters")}>
           View full roster →
         </RosterLink>
 
-        <div className="player-grid">
-          {players.map((player) => (
-            <PlayerCard key={player.id} {...player} />
-          ))}
-        </div>
-      </>
+        <RosterLink onClick={() => setView("search")}>
+          Search players →
+        </RosterLink>
+      </nav>
     );
   }
 
