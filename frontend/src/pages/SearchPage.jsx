@@ -2,17 +2,16 @@ import { useMemo, useState } from "react";
 import SearchBar from "../components/SearchBar";
 import PlayerCard from "../components/PlayerCard";
 import RosterLink from "../components/RosterLink";
+import { filterPlayersByName } from "../utils/filterPlayers";
 import "./SearchPage.css";
 
 function SearchPage({ players, onBack }) {
   const [query, setQuery] = useState("");
 
-  const filteredPlayers = useMemo(() => {
-    if (!query) return players;
-    return players.filter((player) =>
-      player.name.toLowerCase().includes(query),
-    );
-  }, [players, query]);
+  const filteredPlayers = useMemo(
+    () => filterPlayersByName(players, query),
+    [players, query],
+  );
 
   return (
     <section className="search-page">
