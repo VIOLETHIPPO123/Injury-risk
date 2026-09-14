@@ -9,7 +9,7 @@ function SearchBar({ onSearch, placeholder = "Search players…" }) {
   function handleChange(event) {
     const value = event.target.value;
     setQuery(value);
-    onSearch(value.trim().toLowerCase());
+    onSearch(value);
   }
 
   return (

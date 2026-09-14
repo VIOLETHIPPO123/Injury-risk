@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import SearchBar from "../components/SearchBar";
 import PlayerCard from "../components/PlayerCard";
+import { filterPlayersByName } from "../utils/playerUtils";
 import "./SearchPage.css";
 
 // Duplicated from App.jsx for now — same four players GET /players serves.
@@ -40,12 +41,10 @@ const players = [
 function SearchPage() {
   const [query, setQuery] = useState("");
 
-  const filteredPlayers = useMemo(() => {
-    if (!query) return players;
-    return players.filter((player) =>
-      player.name.toLowerCase().includes(query),
-    );
-  }, [query]);
+  const filteredPlayers = useMemo(
+    () => filterPlayersByName(players, query),
+    [query],
+  );
 
   return (
     <main className="search-page">
