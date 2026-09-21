@@ -16,7 +16,8 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
       "cwd": "${workspaceFolder}/frontend",
-      "console": "integratedTerminal"
+      "console": "integratedTerminal",
+      "preLaunchTask": "Install Frontend Dependencies"
     }
   ],
   "compounds": [
