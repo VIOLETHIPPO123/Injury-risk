@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import RosterLink from "./components/RosterLink";
 import RostersPage from "./pages/RostersPage";
 import SearchPage from "./pages/SearchPage";
+import PlayerPage from "./pages/PlayerPage";
 import { getPlayers } from "./services/playerService";
 import "./App.css";
 import Header from "./components/Header";
@@ -9,6 +10,7 @@ import Header from "./components/Header";
 function App() {
   const [view, setView] = useState("home");
   const [players, setPlayers] = useState([]);
+  const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -38,9 +40,22 @@ function App() {
   } else if (error) {
     content = <p>Couldn't load players: {error}</p>;
   } else if (view === "rosters") {
-    content = <RostersPage players={players} onBack={() => setView("home")} />;
+    content = (
+      <RostersPage
+        players={players}
+        onBack={() => setView("home")}
+        onPlayerClick={(player) => {
+          setSelectedPlayer(player);
+          setView("player");
+        }}
+      />
+    );
   } else if (view === "search") {
     content = <SearchPage players={players} onBack={() => setView("home")} />;
+  } else if (view === "player") {
+    content = (
+      <PlayerPage player={selectedPlayer} onBack={() => setView("rosters")} />
+    );
   } else {
     content = (
       <nav className="home-links">

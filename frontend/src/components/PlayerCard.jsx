@@ -1,38 +1,43 @@
-import './PlayerCard.css'
+import "./PlayerCard.css";
+import { calculateAcwr, riskLevel } from "../utils/acwr";
 
-// ACWR (Acute:Chronic Workload Ratio) compares the most recent game's workload
-// against the average of the last four. Roughly 1.0 means "business as usual";
-// a big spike is the classic soft-tissue injury warning sign.
-function calculateAcwr(snapsLastGame, snapsLast4Games) {
-  const chronic = snapsLast4Games / 4
-  if (!chronic) return null
-  return snapsLastGame / chronic
-}
-
-// tier drives both the text color and the card's background tint —
-// under-training and slightly-elevated share "medium" because the risk
-// doc treats both as cautionary, just from opposite directions.
-function riskLevel(acwr) {
-  if (acwr === null) return { label: 'Not enough data', tier: 'unknown' }
-  if (acwr < 0.8) return { label: 'Ramping up', tier: 'medium' }
-  if (acwr <= 1.3) return { label: 'Normal workload', tier: 'low' }
-  if (acwr <= 1.5) return { label: 'Slightly elevated', tier: 'medium' }
-  return { label: 'Spiking — high risk', tier: 'high' }
-}
-
-function PlayerCard({ name, team, snapsLastGame, snapsLast4Games }) {
-  const acwr = calculateAcwr(snapsLastGame, snapsLast4Games)
-  const risk = riskLevel(acwr)
+function PlayerCard({
+  id,
+  name,
+  team,
+  position,
+  snapsLastGame,
+  snapsLast4Games,
+  onClick,
+}) {
+  const acwr = calculateAcwr(snapsLastGame, snapsLast4Games);
+  const risk = riskLevel(acwr);
 
   return (
-    <article className={`player-card risk-${risk.tier}`}>
+    <article
+      className={`player-card risk-${risk.tier}`}
+      onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
       <header className="player-card-header">
         <h2>{name}</h2>
-        <span className="team">{team}</span>
+        <div className="player-card-tags">
+          <span className="team">{team}</span>
+          <span className="position">{position}</span>
+        </div>
       </header>
 
       <div className={`acwr risk-${risk.tier}`}>
-        <span className="acwr-value">{acwr === null ? '—' : acwr.toFixed(2)}</span>
+        <span className="acwr-value">
+          {acwr === null ? "—" : acwr.toFixed(2)}
+        </span>
         <span className="acwr-label">{risk.label}</span>
       </div>
 
@@ -47,7 +52,7 @@ function PlayerCard({ name, team, snapsLastGame, snapsLast4Games }) {
         </div>
       </dl>
     </article>
-  )
+  );
 }
 
-export default PlayerCard
+export default PlayerCard;
