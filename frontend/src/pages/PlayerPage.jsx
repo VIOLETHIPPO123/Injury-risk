@@ -6,7 +6,7 @@ function PlayerPage({ player, onBack }) {
   if (!player) {
     return (
       <section className="player-page">
-        <RosterLink onClick={onBack}>Back to rosters</RosterLink>
+        <RosterLink onClick={onBack}>Back to team page</RosterLink>
         <h1>No player found.</h1>
       </section>
     );
@@ -19,7 +19,7 @@ function PlayerPage({ player, onBack }) {
 
   return (
     <section className={`player-page risk-${risk.tier}`}>
-      <RosterLink onClick={onBack}>Back to rosters</RosterLink>
+      <RosterLink onClick={onBack}>Back to team page</RosterLink>
 
       <header className="player-page-header">
         <h1>{name}</h1>

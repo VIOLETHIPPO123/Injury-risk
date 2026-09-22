@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import RosterLink from "./components/RosterLink";
 import RostersPage from "./pages/RostersPage";
+import TeamRosterPage from "./pages/TeamRosterPage";
 import SearchPage from "./pages/SearchPage";
 import PlayerPage from "./pages/PlayerPage";
 import { getPlayers } from "./services/playerService";
@@ -11,6 +12,7 @@ function App() {
   const [view, setView] = useState("home");
   const [players, setPlayers] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
+  const [selectedTeam, setSelectedTeam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -44,6 +46,18 @@ function App() {
       <RostersPage
         players={players}
         onBack={() => setView("home")}
+        onTeamClick={(team) => {
+          setSelectedTeam(team);
+          setView("team-roster");
+        }}
+      />
+    );
+  } else if (view === "team-roster") {
+    content = (
+      <TeamRosterPage
+        team={selectedTeam}
+        players={players}
+        onBack={() => setView("rosters")}
         onPlayerClick={(player) => {
           setSelectedPlayer(player);
           setView("player");
@@ -54,7 +68,10 @@ function App() {
     content = <SearchPage players={players} onBack={() => setView("home")} />;
   } else if (view === "player") {
     content = (
-      <PlayerPage player={selectedPlayer} onBack={() => setView("rosters")} />
+      <PlayerPage
+        player={selectedPlayer}
+        onBack={() => setView("team-roster")}
+      />
     );
   } else {
     content = (
