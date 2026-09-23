@@ -39,4 +39,10 @@ public class WatchlistService {
         }
         return watchlistRepository.save(existing);
     }
+
+    public void deleteEntry(Long id) {
+        if (!watchlistRepository.deleteById(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Watchlist entry not found");
+        }
+    }
 }
