@@ -1,0 +1,23 @@
+.team-roster-page {
+  text-align: left;
+}
+
+.team-roster-page h1 {
+  font-family: var(--mono);
+  margin-bottom: 20px;
+}
+
+.team-roster-page .player-grid {
+  width: fit-content;
+  margin: 0 auto;
+
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.team-roster-page .formation-row {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+}

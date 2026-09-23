@@ -2,28 +2,47 @@
   text-align: left;
 }
 
-.team-group {
-  margin-bottom: 40px;
+.conference-group {
+  margin-bottom: 32px;
 }
 
-.team-group h2 {
+.conference-group h2 {
   font-family: var(--mono);
-  font-size: 18px;
+  font-size: 20px;
   color: var(--text-h);
   margin-bottom: 12px;
 }
 
-.rosters-page .player-grid {
-  width: fit-content;
-  margin: 0 auto;
-
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+.division-group {
+  margin-bottom: 20px;
 }
 
-.formation-row {
+.division-group h3 {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-h);
+  margin-bottom: 0 0 8px;
+}
+
+.team-buttons {
   display: flex;
-  justify-content: center;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.team-button {
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: none;
+  background: var(--code-bg);
+  color: var(--text-h);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.team-button:hover {
+  background: var(--risk-bg-low, rgba(21, 128, 61, 0.12));
 }
