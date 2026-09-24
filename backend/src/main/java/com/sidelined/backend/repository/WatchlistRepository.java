@@ -25,4 +25,9 @@ public class WatchlistRepository {
     public Optional<WatchlistEntry> findById(Long id) {
         return Optional.ofNullable(entries.get(id));
     }
+
+    // Returns false when the id was not on the watchlist, so the service can answer 404.
+    public boolean deleteById(Long id) {
+        return entries.remove(id) != null;
+    }
 }

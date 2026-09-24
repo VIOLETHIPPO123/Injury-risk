@@ -144,4 +144,31 @@ class WatchlistServiceTest {
         assertEquals(HttpStatus.NOT_FOUND, thrown.getStatusCode());
         verify(watchlistRepository, never()).save(any());
     }
+
+    // ---------- deleteEntry ----------
+
+    @Test
+    void deleteEntry_existingEntry_removesItFromTheWatchlist() {
+        // Arrange
+        when(watchlistRepository.deleteById(5L)).thenReturn(true);
+
+        // Act
+        watchlistService.deleteEntry(5L);
+
+        // Assert
+        verify(watchlistRepository, times(1)).deleteById(5L);
+    }
+
+    @Test
+    void deleteEntry_missingEntry_throwsNotFound() {
+        // Arrange
+        when(watchlistRepository.deleteById(999L)).thenReturn(false);
+
+        // Act
+        ResponseStatusException thrown = assertThrows(ResponseStatusException.class,
+            () -> watchlistService.deleteEntry(999L));
+
+        // Assert
+        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatusCode());
+    }
 }

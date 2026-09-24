@@ -25,4 +25,10 @@ public class WatchlistController {
     public WatchlistEntry updateWatchlistEntry(@PathVariable Long id, @RequestBody WatchlistEntry changes) {
         return watchlistService.updateEntry(id, changes);
     }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeFromWatchlist(@PathVariable Long id) {
+        watchlistService.deleteEntry(id);
+    }
 }
