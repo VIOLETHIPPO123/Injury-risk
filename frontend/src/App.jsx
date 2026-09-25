@@ -4,6 +4,7 @@ import RostersPage from "./pages/RostersPage";
 import TeamRosterPage from "./pages/TeamRosterPage";
 import SearchPage from "./pages/SearchPage";
 import PlayerPage from "./pages/PlayerPage";
+import AcwrInfoPage from "./pages/AcwrInfoPage";
 import { getPlayers } from "./services/playerService";
 import "./App.css";
 import Header from "./components/Header";
@@ -73,17 +74,27 @@ function App() {
         onBack={() => setView("team-roster")}
       />
     );
+  } else if (view === "acwr-info") {
+    content = <AcwrInfoPage onBack={() => setView("home")} />;
   } else {
     content = (
-      <nav className="home-links">
-        <RosterLink onClick={() => setView("rosters")}>
-          View full roster →
-        </RosterLink>
+      <>
+        <nav className="home-links">
+          <RosterLink onClick={() => setView("rosters")}>
+            View full roster →
+          </RosterLink>
 
-        <RosterLink onClick={() => setView("search")}>
-          Search players →
-        </RosterLink>
-      </nav>
+          <RosterLink onClick={() => setView("search")}>
+            Search players →
+          </RosterLink>
+        </nav>
+
+        <nav className="acwr-info-link">
+          <RosterLink onClick={() => setView("acwr-info")}>
+            What is ACWR?
+          </RosterLink>
+        </nav>
+      </>
     );
   }
 
