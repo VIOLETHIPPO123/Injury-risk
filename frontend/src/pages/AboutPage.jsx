@@ -11,7 +11,9 @@ function AboutPage({ onBack, onNavigateToAcwr }) {
         before it costs them a season, surfacing each player's workload-based
         risk score so keeper and trade decisions aren't a guessing game.
       </p>
-      <RosterLink onClick={onNavigateToAcwr}>What is ACWR? →</RosterLink>
+      <div className="acwr-link">
+        <RosterLink onClick={onNavigateToAcwr}>What is ACWR? →</RosterLink>
+      </div>
     </section>
   );
 }
