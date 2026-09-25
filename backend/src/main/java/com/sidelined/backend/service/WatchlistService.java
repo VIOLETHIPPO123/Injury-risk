@@ -5,6 +5,8 @@ import com.sidelined.backend.repository.WatchlistRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import java.util.Comparator;
+import java.util.List;
 
 @Service
 public class WatchlistService {
@@ -15,6 +17,13 @@ public class WatchlistService {
     public WatchlistService(WatchlistRepository watchlistRepository, PlayerService playerService) {
         this.watchlistRepository = watchlistRepository;
         this.playerService = playerService;
+    }
+
+    // Oldest first, so the watchlist page keeps a stable order as entries are added.
+    public List<WatchlistEntry> getAllEntries() {
+        return watchlistRepository.findAll().stream()
+            .sorted(Comparator.comparing(WatchlistEntry::getId))
+            .toList();
     }
 
     public WatchlistEntry createEntry(WatchlistEntry request) {

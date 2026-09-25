@@ -4,7 +4,14 @@ import RostersPage from "./pages/RostersPage";
 import TeamRosterPage from "./pages/TeamRosterPage";
 import SearchPage from "./pages/SearchPage";
 import PlayerPage from "./pages/PlayerPage";
+import WatchlistPage from "./pages/WatchlistPage";
 import { getPlayers } from "./services/playerService";
+import {
+  getWatchlist,
+  addToWatchlist,
+  updateWatchlistEntry,
+  removeFromWatchlist,
+} from "./services/watchlistService";
 import "./App.css";
 import Header from "./components/Header";
 
@@ -15,6 +22,8 @@ function App() {
   const [selectedTeam, setSelectedTeam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [watchlist, setWatchlist] = useState([]);
+  const [watchlistError, setWatchlistError] = useState(null);
 
   useEffect(() => {
     // StrictMode runs effects twice in dev — ignore the result of the discarded run.
@@ -35,6 +44,54 @@ function App() {
       ignore = true;
     };
   }, []);
+
+  // Loaded separately so a watchlist failure doesn't block the rest of the app.
+  useEffect(() => {
+    let ignore = false;
+
+    getWatchlist()
+      .then((data) => {
+        if (!ignore) setWatchlist(data);
+      })
+      .catch((err) => {
+        if (!ignore) setWatchlistError(err.message);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const watchlistedIds = new Set(watchlist.map((entry) => entry.playerId));
+
+  // Each handler updates local state from the backend's response instead of re-fetching the list.
+  function handleAddToWatchlist(playerId) {
+    setWatchlistError(null);
+    addToWatchlist(playerId)
+      .then((entry) => setWatchlist((prev) => [...prev, entry]))
+      .catch((err) => setWatchlistError(err.message));
+  }
+
+  // Resolves to true on success so the edit form knows whether to close.
+  function handleUpdateWatchlistEntry(id, note) {
+    setWatchlistError(null);
+    return updateWatchlistEntry(id, note)
+      .then((updated) => {
+        setWatchlist((prev) => prev.map((e) => (e.id === id ? updated : e)));
+        return true;
+      })
+      .catch((err) => {
+        setWatchlistError(err.message);
+        return false;
+      });
+  }
+
+  function handleRemoveFromWatchlist(id) {
+    setWatchlistError(null);
+    removeFromWatchlist(id)
+      .then(() => setWatchlist((prev) => prev.filter((e) => e.id !== id)))
+      .catch((err) => setWatchlistError(err.message));
+  }
 
   let content;
   if (loading) {
@@ -62,10 +119,29 @@ function App() {
           setSelectedPlayer(player);
           setView("player");
         }}
+        watchlistedIds={watchlistedIds}
+        onAddToWatchlist={handleAddToWatchlist}
       />
     );
   } else if (view === "search") {
-    content = <SearchPage players={players} onBack={() => setView("home")} />;
+    content = (
+      <SearchPage
+        players={players}
+        onBack={() => setView("home")}
+        watchlistedIds={watchlistedIds}
+        onAddToWatchlist={handleAddToWatchlist}
+      />
+    );
+  } else if (view === "watchlist") {
+    content = (
+      <WatchlistPage
+        entries={watchlist}
+        players={players}
+        onBack={() => setView("home")}
+        onUpdate={handleUpdateWatchlistEntry}
+        onRemove={handleRemoveFromWatchlist}
+      />
+    );
   } else if (view === "player") {
     content = (
       <PlayerPage
@@ -83,6 +159,10 @@ function App() {
         <RosterLink onClick={() => setView("search")}>
           Search players →
         </RosterLink>
+
+        <RosterLink onClick={() => setView("watchlist")}>
+          My watchlist →
+        </RosterLink>
       </nav>
     );
   }
@@ -90,6 +170,11 @@ function App() {
   return (
     <main className="app">
       <Header />
+      {watchlistError && (
+        <p className="watchlist-error" role="alert">
+          Watchlist error: {watchlistError}
+        </p>
+      )}
       {content}
     </main>
   );
