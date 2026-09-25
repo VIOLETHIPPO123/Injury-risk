@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import RosterLink from "./components/RosterLink";
+import NavMenu from "./components/NavMenu";
 import RostersPage from "./pages/RostersPage";
 import TeamRosterPage from "./pages/TeamRosterPage";
 import SearchPage from "./pages/SearchPage";
 import PlayerPage from "./pages/PlayerPage";
+import AboutPage from "./pages/AboutPage";
 import { getPlayers } from "./services/playerService";
 import "./App.css";
 import Header from "./components/Header";
@@ -73,17 +74,17 @@ function App() {
         onBack={() => setView("team-roster")}
       />
     );
+  } else if (view === "about") {
+    content = <AboutPage onBack={() => setView("home")} />;
   } else {
     content = (
-      <nav className="home-links">
-        <RosterLink onClick={() => setView("rosters")}>
-          View full roster →
-        </RosterLink>
-
-        <RosterLink onClick={() => setView("search")}>
-          Search players →
-        </RosterLink>
-      </nav>
+      <NavMenu
+        items={[
+          { label: "Roster", onClick: () => setView("rosters") },
+          { label: "Search", onClick: () => setView("search") },
+          { label: "About", onClick: () => setView("about") },
+        ]}
+      />
     );
   }
 
