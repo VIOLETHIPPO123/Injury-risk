@@ -1,0 +1,180 @@
+<mxfile host="app.diagrams.net" modified="2026-09-25T00:00:00.000Z" agent="Claude Code" version="24.7.17" type="device">
+  <diagram name="Class Diagram" id="domain-class-diagram">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1300" pageHeight="820" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Implemented classes -->
+        <mxCell id="team" value="&lt;b&gt;Team&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;code: String&lt;br&gt;name: String" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#dae8fc;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="320" y="40" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="player" value="&lt;b&gt;Player&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;id: Long&lt;br&gt;name: String&lt;br&gt;team: String&lt;br&gt;position: String&lt;br&gt;snapsLastGame: int&lt;br&gt;snapsLast4Games: int" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#dae8fc;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="620" y="40" width="230" height="135" as="geometry" />
+        </mxCell>
+
+        <mxCell id="watchlist" value="&lt;b&gt;WatchlistEntry&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;id: Long&lt;br&gt;playerId: Long&lt;br&gt;note: String" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#dae8fc;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="940" y="40" width="200" height="85" as="geometry" />
+        </mxCell>
+
+        <!-- Derived / computed classes -->
+        <mxCell id="division" value="&lt;b&gt;Division / Conference&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;conference: String&lt;br&gt;division: String&lt;br&gt;teams: Team[]" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="40" width="200" height="85" as="geometry" />
+        </mxCell>
+
+        <mxCell id="workloadratio" value="&lt;b&gt;WorkloadRatio (ACWR)&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;value: double" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="620" y="240" width="230" height="55" as="geometry" />
+        </mxCell>
+
+        <mxCell id="risklevel" value="&lt;b&gt;RiskLevel&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;label: String&lt;br&gt;tier: String" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#f5f5f5;strokeColor=#666666;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="620" y="360" width="230" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Planned / not yet implemented classes -->
+        <mxCell id="workloadentry" value="&lt;b&gt;WorkloadEntry&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;player: Player&lt;br&gt;week: int&lt;br&gt;snaps: int&lt;br&gt;season: int" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="940" y="200" width="220" height="100" as="geometry" />
+        </mxCell>
+
+        <mxCell id="injury" value="&lt;b&gt;Injury&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;player: Player&lt;br&gt;type: String&lt;br&gt;dateReported: Date&lt;br&gt;status: String&lt;br&gt;source: String" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="940" y="370" width="230" height="118" as="geometry" />
+        </mxCell>
+
+        <mxCell id="riskscore" value="&lt;b&gt;RiskScore&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;player: Player&lt;br&gt;score: double&lt;br&gt;computedAt: DateTime" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="940" y="560" width="200" height="85" as="geometry" />
+        </mxCell>
+
+        <mxCell id="league" value="&lt;b&gt;League&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;id: Long&lt;br&gt;name: String" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="260" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="user" value="&lt;b&gt;User&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;id: Long&lt;br&gt;username: String" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="40" y="400" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <mxCell id="roster" value="&lt;b&gt;Roster&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;id: Long&lt;br&gt;user: User" style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#fff2cc;strokeColor=#d6b656;dashed=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="400" width="200" height="70" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="legend" value="&lt;b&gt;Legend&lt;/b&gt;&lt;hr size=&quot;1&quot;&gt;&lt;div style=&quot;background:#dae8fc;display:inline-block;width:10px;height:10px;&quot;&gt;&amp;nbsp;&lt;/div&gt; Implemented (real class today)&lt;br&gt;&lt;div style=&quot;background:#f5f5f5;border:1px dashed #666666;display:inline-block;width:9px;height:9px;&quot;&gt;&amp;nbsp;&lt;/div&gt; Derived (computed, never persisted)&lt;br&gt;&lt;div style=&quot;background:#fff2cc;border:1px dashed #d6b656;display:inline-block;width:9px;height:9px;&quot;&gt;&amp;nbsp;&lt;/div&gt; Planned (not yet implemented)&lt;br&gt;&lt;br&gt;No inheritance exists in the current or&lt;br&gt;planned model &amp;#8212; all associations only." style="rounded=0;whiteSpace=wrap;html=1;align=left;verticalAlign=top;spacingLeft=6;spacingTop=6;fontSize=12;fillColor=#ffffff;strokeColor=#000000;" vertex="1" parent="1">
+          <mxGeometry x="40" y="560" width="380" height="170" as="geometry" />
+        </mxCell>
+
+        <!-- Relationships: implemented (solid, black) -->
+        <mxCell id="e-team-player" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;startArrow=none;strokeColor=#000000;strokeWidth=1;" edge="1" parent="1" source="team" target="player">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-team-player-s" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-team-player">
+          <mxGeometry x="-0.7" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-team-player-t" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-team-player">
+          <mxGeometry x="0.7" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e-player-watchlist" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;startArrow=none;strokeColor=#000000;strokeWidth=1;" edge="1" parent="1" source="player" target="watchlist">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-player-watchlist-s" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-player-watchlist">
+          <mxGeometry x="-0.7" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-player-watchlist-t" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-player-watchlist">
+          <mxGeometry x="0.7" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- Relationships: derived (dashed gray, open arrow = "computed from") -->
+        <mxCell id="e-division-team" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;startArrow=none;dashed=1;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="division" target="team">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-division-team-s" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-division-team">
+          <mxGeometry x="-0.7" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-division-team-t" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-division-team">
+          <mxGeometry x="0.7" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e-player-ratio" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;startArrow=none;dashed=1;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="player" target="workloadratio">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-player-ratio-s" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-player-ratio">
+          <mxGeometry x="-0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-player-ratio-t" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-player-ratio">
+          <mxGeometry x="0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e-ratio-risk" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;startArrow=none;dashed=1;strokeColor=#666666;strokeWidth=1;" edge="1" parent="1" source="workloadratio" target="risklevel">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-ratio-risk-s" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-ratio-risk">
+          <mxGeometry x="-0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-ratio-risk-t" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-ratio-risk">
+          <mxGeometry x="0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <!-- Relationships: planned (dashed tan) -->
+        <mxCell id="e-player-workloadentry" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;startArrow=none;dashed=1;strokeColor=#d6b656;strokeWidth=1;" edge="1" parent="1" source="player" target="workloadentry">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-player-workloadentry-s" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-player-workloadentry">
+          <mxGeometry x="-0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-player-workloadentry-t" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-player-workloadentry">
+          <mxGeometry x="0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e-player-injury" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;startArrow=none;dashed=1;strokeColor=#d6b656;strokeWidth=1;" edge="1" parent="1" source="player" target="injury">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-player-injury-s" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-player-injury">
+          <mxGeometry x="-0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-player-injury-t" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-player-injury">
+          <mxGeometry x="0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e-player-riskscore" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;startArrow=none;dashed=1;strokeColor=#d6b656;strokeWidth=1;" edge="1" parent="1" source="player" target="riskscore">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-player-riskscore-s" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-player-riskscore">
+          <mxGeometry x="-0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-player-riskscore-t" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-player-riskscore">
+          <mxGeometry x="0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e-league-user" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;startArrow=none;dashed=1;strokeColor=#d6b656;strokeWidth=1;" edge="1" parent="1" source="league" target="user">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-league-user-s" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-league-user">
+          <mxGeometry x="-0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-league-user-t" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-league-user">
+          <mxGeometry x="0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e-user-roster" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;startArrow=none;dashed=1;strokeColor=#d6b656;strokeWidth=1;" edge="1" parent="1" source="user" target="roster">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-user-roster-s" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-user-roster">
+          <mxGeometry x="-0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-user-roster-t" value="1" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-user-roster">
+          <mxGeometry x="0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+        <mxCell id="e-roster-player" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;startArrow=none;dashed=1;strokeColor=#d6b656;strokeWidth=1;exitX=0.5;exitY=0;entryX=0.25;entryY=1;" edge="1" parent="1" source="roster" target="player">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e-roster-player-s" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-roster-player">
+          <mxGeometry x="-0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+        <mxCell id="e-roster-player-t" value="*" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;" vertex="1" connectable="0" parent="e-roster-player">
+          <mxGeometry x="0.6" relative="1" as="geometry"><mxPoint as="offset" /></mxGeometry>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
