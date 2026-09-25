@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import NavMenu from "./components/NavMenu";
+import RosterLink from "./components/RosterLink";
 import RostersPage from "./pages/RostersPage";
 import TeamRosterPage from "./pages/TeamRosterPage";
 import SearchPage from "./pages/SearchPage";
 import PlayerPage from "./pages/PlayerPage";
 import AboutPage from "./pages/AboutPage";
+import AcwrInfoPage from "./pages/AcwrInfoPage";
 import { getPlayers } from "./services/playerService";
 import "./App.css";
 import Header from "./components/Header";
@@ -76,15 +78,25 @@ function App() {
     );
   } else if (view === "about") {
     content = <AboutPage onBack={() => setView("home")} />;
+  } else if (view === "acwr-info") {
+    content = <AcwrInfoPage onBack={() => setView("home")} />;
   } else {
     content = (
-      <NavMenu
-        items={[
-          { label: "Roster", onClick: () => setView("rosters") },
-          { label: "Search", onClick: () => setView("search") },
-          { label: "About", onClick: () => setView("about") },
-        ]}
-      />
+      <>
+        <NavMenu
+          items={[
+            { label: "Roster", onClick: () => setView("rosters") },
+            { label: "Search", onClick: () => setView("search") },
+            { label: "About", onClick: () => setView("about") },
+          ]}
+        />
+
+        <nav className="acwr-info-link">
+          <RosterLink onClick={() => setView("acwr-info")}>
+            What is ACWR?
+          </RosterLink>
+        </nav>
+      </>
     );
   }
 
