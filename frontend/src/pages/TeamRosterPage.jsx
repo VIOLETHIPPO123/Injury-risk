@@ -3,7 +3,14 @@ import RosterLink from "../components/RosterLink";
 import { createFormation } from "../utils/formation";
 import "./TeamRosterPage.css";
 
-function TeamRosterPage({ team, players, onBack, onPlayerClick }) {
+function TeamRosterPage({
+  team,
+  players,
+  onBack,
+  onPlayerClick,
+  watchlistedIds = new Set(),
+  onAddToWatchlist,
+}) {
   const teamPlayers = players.filter((p) => p.team === team);
   const formation = createFormation(teamPlayers);
 
@@ -19,6 +26,8 @@ function TeamRosterPage({ team, players, onBack, onPlayerClick }) {
               key={player.id}
               {...player}
               onClick={() => onPlayerClick(player)}
+              isWatchlisted={watchlistedIds.has(player.id)}
+              onAddToWatchlist={onAddToWatchlist}
             />
           ))}
         </div>
@@ -29,6 +38,8 @@ function TeamRosterPage({ team, players, onBack, onPlayerClick }) {
               key={player.id}
               {...player}
               onClick={() => onPlayerClick(player)}
+              isWatchlisted={watchlistedIds.has(player.id)}
+              onAddToWatchlist={onAddToWatchlist}
             />
           ))}
         </div>

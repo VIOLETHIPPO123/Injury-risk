@@ -2,6 +2,8 @@ package com.sidelined.backend.repository;
 
 import com.sidelined.backend.model.WatchlistEntry;
 import org.springframework.stereotype.Repository;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,6 +22,10 @@ public class WatchlistRepository {
         }
         entries.put(entry.getId(), entry);
         return entry;
+    }
+
+    public List<WatchlistEntry> findAll() {
+        return new ArrayList<>(entries.values());
     }
 
     public Optional<WatchlistEntry> findById(Long id) {

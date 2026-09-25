@@ -21,3 +21,10 @@
     gap: 16px;
   }
 }
+
+.watchlist-error {
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #b91c1c;
+  background: #b91c1c1f;
+}

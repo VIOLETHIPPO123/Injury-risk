@@ -43,6 +43,34 @@ class WatchlistServiceTest {
         });
     }
 
+    // ---------- getAllEntries ----------
+
+    @Test
+    void getAllEntries_returnsEntriesOrderedById() {
+        // Arrange
+        WatchlistEntry later = new WatchlistEntry(7L, 1L, "Added second");
+        WatchlistEntry earlier = new WatchlistEntry(3L, 1L, "Added first");
+        when(watchlistRepository.findAll()).thenReturn(List.of(later, earlier));
+
+        // Act
+        List<WatchlistEntry> result = watchlistService.getAllEntries();
+
+        // Assert
+        assertEquals(List.of(earlier, later), result);
+    }
+
+    @Test
+    void getAllEntries_emptyWatchlist_returnsEmptyList() {
+        // Arrange
+        when(watchlistRepository.findAll()).thenReturn(List.of());
+
+        // Act
+        List<WatchlistEntry> result = watchlistService.getAllEntries();
+
+        // Assert
+        assertTrue(result.isEmpty());
+    }
+
     // ---------- createEntry ----------
 
     @Test

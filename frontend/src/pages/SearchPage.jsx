@@ -5,7 +5,12 @@ import RosterLink from "../components/RosterLink";
 import { filterPlayersByName } from "../utils/filterPlayers";
 import "./SearchPage.css";
 
-function SearchPage({ players = [], onBack }) {
+function SearchPage({
+  players = [],
+  onBack,
+  watchlistedIds = new Set(),
+  onAddToWatchlist,
+}) {
   const [query, setQuery] = useState("");
 
   const filteredPlayers = useMemo(
@@ -23,7 +28,12 @@ function SearchPage({ players = [], onBack }) {
       {filteredPlayers.length > 0 ? (
         <div className="player-grid">
           {filteredPlayers.map((player) => (
-            <PlayerCard key={player.id} {...player} />
+            <PlayerCard
+              key={player.id}
+              {...player}
+              isWatchlisted={watchlistedIds.has(player.id)}
+              onAddToWatchlist={onAddToWatchlist}
+            />
           ))}
         </div>
       ) : (
