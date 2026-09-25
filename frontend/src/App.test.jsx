@@ -23,7 +23,6 @@ describe("homepage navigation", () => {
     ["Roster", "Rosters"],
     ["Search", "Search Players"],
     ["About", "About Sidelined"],
-    ["What is ACWR?", "Understanding ACWR"],
   ])(
     "renders a %s item in the nav menu that navigates to the %s page",
     async (label, pageHeading) => {
@@ -40,4 +39,19 @@ describe("homepage navigation", () => {
       ).toBeInTheDocument();
     },
   );
+
+  it("reaches the ACWR info page from a link on the About page", async () => {
+    const user = userEvent.setup();
+    await renderHome();
+
+    await user.click(
+      screen.getByRole("button", { name: "Toggle navigation menu" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "About" }));
+    await user.click(screen.getByRole("button", { name: /what is acwr/i }));
+
+    expect(
+      screen.getByRole("heading", { name: "Understanding ACWR" }),
+    ).toBeInTheDocument();
+  });
 });

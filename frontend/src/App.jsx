@@ -76,9 +76,14 @@ function App() {
       />
     );
   } else if (view === "about") {
-    content = <AboutPage onBack={() => setView("home")} />;
+    content = (
+      <AboutPage
+        onBack={() => setView("home")}
+        onNavigateToAcwr={() => setView("acwr-info")}
+      />
+    );
   } else if (view === "acwr-info") {
-    content = <AcwrInfoPage onBack={() => setView("home")} />;
+    content = <AcwrInfoPage onBack={() => setView("about")} />;
   } else {
     content = (
       <NavMenu
@@ -86,7 +91,6 @@ function App() {
           { label: "Roster", onClick: () => setView("rosters") },
           { label: "Search", onClick: () => setView("search") },
           { label: "About", onClick: () => setView("about") },
-          { label: "What is ACWR?", onClick: () => setView("acwr-info") },
         ]}
       />
     );
