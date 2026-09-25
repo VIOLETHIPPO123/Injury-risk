@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
+import NavMenu from "./components/NavMenu";
 import RosterLink from "./components/RosterLink";
 import RostersPage from "./pages/RostersPage";
 import TeamRosterPage from "./pages/TeamRosterPage";
 import SearchPage from "./pages/SearchPage";
 import PlayerPage from "./pages/PlayerPage";
 import WatchlistPage from "./pages/WatchlistPage";
+import AboutPage from "./pages/AboutPage";
 import AcwrInfoPage from "./pages/AcwrInfoPage";
 import { getPlayers } from "./services/playerService";
 import {
@@ -150,24 +152,21 @@ function App() {
         onBack={() => setView("team-roster")}
       />
     );
+  } else if (view === "about") {
+    content = <AboutPage onBack={() => setView("home")} />;
   } else if (view === "acwr-info") {
     content = <AcwrInfoPage onBack={() => setView("home")} />;
   } else {
     content = (
       <>
-        <nav className="home-links">
-          <RosterLink onClick={() => setView("rosters")}>
-            View full roster →
-          </RosterLink>
-
-          <RosterLink onClick={() => setView("search")}>
-            Search players →
-          </RosterLink>
-
-          <RosterLink onClick={() => setView("watchlist")}>
-            My watchlist →
-          </RosterLink>
-        </nav>
+        <NavMenu
+          items={[
+            { label: "Roster", onClick: () => setView("rosters") },
+            { label: "Search", onClick: () => setView("search") },
+            { label: "Watchlist", onClick: () => setView("watchlist") },
+            { label: "About", onClick: () => setView("about") },
+          ]}
+        />
 
         <nav className="acwr-info-link">
           <RosterLink onClick={() => setView("acwr-info")}>

@@ -12,12 +12,6 @@
   color: var(--text);
 }
 
-.home-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-}
-
 .acwr-info-link {
   position: fixed;
   bottom: 24px;

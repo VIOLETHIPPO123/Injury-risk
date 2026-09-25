@@ -47,17 +47,42 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("homepage navigation", () => {
-  it("reaches the ACWR info page from a homepage button", async () => {
-    getPlayers.mockResolvedValue([]);
-    const user = userEvent.setup();
-    render(<App />);
+async function renderHome(players = []) {
+  getPlayers.mockResolvedValue(players);
+  render(<App />);
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Toggle navigation menu" }),
+    ).toBeInTheDocument(),
+  );
+}
 
-    await waitFor(() =>
+describe("homepage navigation", () => {
+  it.each([
+    ["Roster", "Rosters"],
+    ["Search", "Search Players"],
+    ["Watchlist", "Watchlist"],
+    ["About", "About Sidelined"],
+  ])(
+    "renders a %s item in the nav menu that navigates to the %s page",
+    async (label, pageHeading) => {
+      const user = userEvent.setup();
+      await renderHome();
+
+      await user.click(
+        screen.getByRole("button", { name: "Toggle navigation menu" }),
+      );
+      await user.click(screen.getByRole("menuitem", { name: label }));
+
       expect(
-        screen.getByRole("button", { name: /what is acwr/i }),
-      ).toBeInTheDocument(),
-    );
+        screen.getByRole("heading", { name: pageHeading }),
+      ).toBeInTheDocument();
+    },
+  );
+
+  it("reaches the ACWR info page from a homepage button", async () => {
+    const user = userEvent.setup();
+    await renderHome();
 
     await user.click(screen.getByRole("button", { name: /what is acwr/i }));
 
@@ -69,9 +94,9 @@ describe("homepage navigation", () => {
 
 test("Add to Watchlist submits the expected payload and the player shows up on the watchlist page", async () => {
   // Arrange
-  getPlayers.mockResolvedValue(PLAYERS);
-  render(<App />);
-  fireEvent.click(await screen.findByText("Search players →"));
+  await renderHome(PLAYERS);
+  fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Search" }));
 
   // Act
   fireEvent.click(screen.getByText("Add to Watchlist"));
@@ -85,6 +110,7 @@ test("Add to Watchlist submits the expected payload and the player shows up on t
   // Assert — the UI reflects the new entry
   expect(await screen.findByText("On watchlist")).toBeDisabled();
   fireEvent.click(screen.getByText("← Back to home"));
-  fireEvent.click(screen.getByText("My watchlist →"));
+  fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Watchlist" }));
   expect(screen.getByText("Jacoby Brissett")).toBeInTheDocument();
 });
