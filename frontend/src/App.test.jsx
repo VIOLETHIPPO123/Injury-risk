@@ -1,6 +1,12 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, expect, test, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import App from "./App";
+import { getPlayers } from "./services/playerService";
+
+vi.mock("./services/playerService", () => ({
+  getPlayers: vi.fn(),
+}));
 
 const PLAYERS = [
   {
@@ -21,12 +27,12 @@ function jsonResponse(status, body) {
   });
 }
 
-// A fake backend: answers GET /players, GET /watchlist and POST /watchlist.
+// A fake backend for the watchlist: answers GET /watchlist and POST /watchlist.
+// Players come from the mocked playerService above.
 beforeEach(() => {
   vi.stubGlobal(
     "fetch",
     vi.fn((url, options = {}) => {
-      if (url.endsWith("/players")) return jsonResponse(200, PLAYERS);
       if (url.endsWith("/watchlist") && options.method === "POST") {
         const { playerId, note } = JSON.parse(options.body);
         return jsonResponse(201, { id: 1, playerId, note });
@@ -41,8 +47,29 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe("homepage navigation", () => {
+  it("reaches the ACWR info page from a homepage button", async () => {
+    getPlayers.mockResolvedValue([]);
+    const user = userEvent.setup();
+    render(<App />);
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /what is acwr/i }),
+      ).toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole("button", { name: /what is acwr/i }));
+
+    expect(
+      screen.getByRole("heading", { name: "Understanding ACWR" }),
+    ).toBeInTheDocument();
+  });
+});
+
 test("Add to Watchlist submits the expected payload and the player shows up on the watchlist page", async () => {
   // Arrange
+  getPlayers.mockResolvedValue(PLAYERS);
   render(<App />);
   fireEvent.click(await screen.findByText("Search players →"));
 

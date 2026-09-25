@@ -5,6 +5,7 @@ import TeamRosterPage from "./pages/TeamRosterPage";
 import SearchPage from "./pages/SearchPage";
 import PlayerPage from "./pages/PlayerPage";
 import WatchlistPage from "./pages/WatchlistPage";
+import AcwrInfoPage from "./pages/AcwrInfoPage";
 import { getPlayers } from "./services/playerService";
 import {
   getWatchlist,
@@ -149,21 +150,31 @@ function App() {
         onBack={() => setView("team-roster")}
       />
     );
+  } else if (view === "acwr-info") {
+    content = <AcwrInfoPage onBack={() => setView("home")} />;
   } else {
     content = (
-      <nav className="home-links">
-        <RosterLink onClick={() => setView("rosters")}>
-          View full roster →
-        </RosterLink>
+      <>
+        <nav className="home-links">
+          <RosterLink onClick={() => setView("rosters")}>
+            View full roster →
+          </RosterLink>
 
-        <RosterLink onClick={() => setView("search")}>
-          Search players →
-        </RosterLink>
+          <RosterLink onClick={() => setView("search")}>
+            Search players →
+          </RosterLink>
 
-        <RosterLink onClick={() => setView("watchlist")}>
-          My watchlist →
-        </RosterLink>
-      </nav>
+          <RosterLink onClick={() => setView("watchlist")}>
+            My watchlist →
+          </RosterLink>
+        </nav>
+
+        <nav className="acwr-info-link">
+          <RosterLink onClick={() => setView("acwr-info")}>
+            What is ACWR?
+          </RosterLink>
+        </nav>
+      </>
     );
   }
 
