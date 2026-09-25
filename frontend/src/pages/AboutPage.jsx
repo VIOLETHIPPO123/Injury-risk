@@ -1,7 +1,7 @@
 import RosterLink from "../components/RosterLink";
 import "./AboutPage.css";
 
-function AboutPage({ onBack }) {
+function AboutPage({ onBack, onNavigateToAcwr }) {
   return (
     <section className="about-page">
       <RosterLink onClick={onBack}>← Back to home</RosterLink>
@@ -11,6 +11,9 @@ function AboutPage({ onBack }) {
         before it costs them a season, surfacing each player's workload-based
         risk score so keeper and trade decisions aren't a guessing game.
       </p>
+      <div className="acwr-link">
+        <RosterLink onClick={onNavigateToAcwr}>What is ACWR? →</RosterLink>
+      </div>
     </section>
   );
 }

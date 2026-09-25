@@ -39,4 +39,5 @@
 
 .nav-menu-dropdown .btn {
   width: 100%;
+  white-space: nowrap;
 }

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import NavMenu from "./components/NavMenu";
-import RosterLink from "./components/RosterLink";
 import RostersPage from "./pages/RostersPage";
 import TeamRosterPage from "./pages/TeamRosterPage";
 import SearchPage from "./pages/SearchPage";
@@ -153,9 +152,14 @@ function App() {
       />
     );
   } else if (view === "about") {
-    content = <AboutPage onBack={() => setView("home")} />;
+    content = (
+      <AboutPage
+        onBack={() => setView("home")}
+        onNavigateToAcwr={() => setView("acwr-info")}
+      />
+    );
   } else if (view === "acwr-info") {
-    content = <AcwrInfoPage onBack={() => setView("home")} />;
+    content = <AcwrInfoPage onBack={() => setView("about")} />;
   } else {
     content = (
       <>

@@ -80,10 +80,14 @@ describe("homepage navigation", () => {
     },
   );
 
-  it("reaches the ACWR info page from a homepage button", async () => {
+  it("reaches the ACWR info page from a link on the About page", async () => {
     const user = userEvent.setup();
     await renderHome();
 
+    await user.click(
+      screen.getByRole("button", { name: "Toggle navigation menu" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "About" }));
     await user.click(screen.getByRole("button", { name: /what is acwr/i }));
 
     expect(
