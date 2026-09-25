@@ -4,6 +4,7 @@ import com.sidelined.backend.model.WatchlistEntry;
 import com.sidelined.backend.service.WatchlistService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/watchlist")
@@ -13,6 +14,11 @@ public class WatchlistController {
 
     public WatchlistController(WatchlistService watchlistService) {
         this.watchlistService = watchlistService;
+    }
+
+    @GetMapping
+    public List<WatchlistEntry> getWatchlist() {
+        return watchlistService.getAllEntries();
     }
 
     @PostMapping

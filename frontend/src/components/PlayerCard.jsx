@@ -9,6 +9,8 @@ function PlayerCard({
   snapsLastGame,
   snapsLast4Games,
   onClick,
+  onAddToWatchlist,
+  isWatchlisted = false,
 }) {
   const acwr = calculateAcwr(snapsLastGame, snapsLast4Games);
   const risk = riskLevel(acwr);
@@ -22,7 +24,7 @@ function PlayerCard({
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onClick();
+          onClick?.();
         }
       }}
     >
@@ -51,6 +53,22 @@ function PlayerCard({
           <dd>{snapsLast4Games}</dd>
         </div>
       </dl>
+
+      {onAddToWatchlist && (
+        <button
+          type="button"
+          className="watchlist-add"
+          disabled={isWatchlisted}
+          // The card itself is clickable, so keep this button's events from opening the player.
+          onClick={(e) => {
+            e.stopPropagation();
+            onAddToWatchlist(id);
+          }}
+          onKeyDown={(e) => e.stopPropagation()}
+        >
+          {isWatchlisted ? "On watchlist" : "Add to Watchlist"}
+        </button>
+      )}
     </article>
   );
 }
