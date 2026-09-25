@@ -27,21 +27,43 @@ function jsonResponse(status, body) {
   });
 }
 
-// A fake backend for the watchlist: answers GET /watchlist and POST /watchlist.
-// Players come from the mocked playerService above.
+// What GET /watchlist returns when the app loads. Tests that start with entries overwrite it.
+let savedEntries = [];
+
+// A fake backend for the watchlist CRUD endpoints. Players come from the mocked playerService above.
 beforeEach(() => {
+  savedEntries = [];
   vi.stubGlobal(
     "fetch",
     vi.fn((url, options = {}) => {
-      if (url.endsWith("/watchlist") && options.method === "POST") {
+      const method = options.method ?? "GET";
+      const id = Number(url.match(/\/watchlist\/(\d+)$/)?.[1]);
+
+      if (url.endsWith("/watchlist") && method === "POST") {
         const { playerId, note } = JSON.parse(options.body);
         return jsonResponse(201, { id: 1, playerId, note });
       }
-      if (url.endsWith("/watchlist")) return jsonResponse(200, []);
-      throw new Error(`Unexpected request: ${url}`);
+      if (url.endsWith("/watchlist")) return jsonResponse(200, savedEntries);
+      if (id && method === "PUT") {
+        const existing = savedEntries.find((e) => e.id === id);
+        return jsonResponse(200, { ...existing, ...JSON.parse(options.body) });
+      }
+      if (id && method === "DELETE") return jsonResponse(204);
+      throw new Error(`Unexpected request: ${method} ${url}`);
     }),
   );
 });
+
+function watchlistGetCalls() {
+  return fetch.mock.calls.filter(
+    ([url, opts]) => url.endsWith("/watchlist") && opts?.method === "GET",
+  );
+}
+
+async function openWatchlistPage() {
+  fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Watchlist" }));
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -110,7 +132,64 @@ test("Add to Watchlist submits the expected payload and the player shows up on t
   // Assert — the UI reflects the new entry
   expect(await screen.findByText("On watchlist")).toBeDisabled();
   fireEvent.click(screen.getByText("← Back to home"));
-  fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
-  fireEvent.click(screen.getByRole("menuitem", { name: "Watchlist" }));
+  await openWatchlistPage();
   expect(screen.getByText("Jacoby Brissett")).toBeInTheDocument();
+  // The new entry came from the POST response; the list was never reloaded.
+  expect(watchlistGetCalls()).toHaveLength(1);
+});
+
+describe("watchlist updates without a page refresh", () => {
+  test("editing a note shows the new note right away", async () => {
+    // Arrange
+    savedEntries = [{ id: 1, playerId: 7, note: "Monitor snaps" }];
+    await renderHome(PLAYERS);
+    await openWatchlistPage();
+    expect(await screen.findByText("Monitor snaps")).toBeInTheDocument();
+
+    // Act
+    fireEvent.click(screen.getByText("Edit"));
+    fireEvent.change(screen.getByLabelText("Note"), {
+      target: { value: "Snap share dropping" },
+    });
+    fireEvent.click(screen.getByText("Save"));
+
+    // Assert — wait for the form to close, since the open textarea also contains the draft text.
+    expect(await screen.findByText("Edit")).toBeInTheDocument();
+    expect(screen.getByText("Snap share dropping")).toBeInTheDocument();
+    expect(screen.queryByText("Monitor snaps")).not.toBeInTheDocument();
+    expect(watchlistGetCalls()).toHaveLength(1);
+  });
+
+  test("removing an entry takes it off the list right away", async () => {
+    // Arrange
+    savedEntries = [{ id: 1, playerId: 7, note: "Monitor snaps" }];
+    await renderHome(PLAYERS);
+    await openWatchlistPage();
+    expect(await screen.findByText("Jacoby Brissett")).toBeInTheDocument();
+
+    // Act
+    fireEvent.click(screen.getByText("Remove"));
+
+    // Assert
+    expect(await screen.findByText(/Your watchlist is empty/)).toBeInTheDocument();
+    expect(screen.queryByText("Jacoby Brissett")).not.toBeInTheDocument();
+    expect(watchlistGetCalls()).toHaveLength(1);
+  });
+
+  test("removing an entry re-enables Add to Watchlist for that player", async () => {
+    // Arrange
+    savedEntries = [{ id: 1, playerId: 7, note: "" }];
+    await renderHome(PLAYERS);
+    await openWatchlistPage();
+    fireEvent.click(await screen.findByText("Remove"));
+    await screen.findByText(/Your watchlist is empty/);
+
+    // Act
+    fireEvent.click(screen.getByText("← Back to home"));
+    fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Search" }));
+
+    // Assert
+    expect(screen.getByText("Add to Watchlist")).toBeEnabled();
+  });
 });
