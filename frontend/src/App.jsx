@@ -173,9 +173,9 @@ function App() {
         />
 
         <nav className="acwr-info-link">
-          <RosterLink onClick={() => setView("acwr-info")}>
+          <button type="button" onClick={() => setView("acwr-info")}>
             What is ACWR?
-          </RosterLink>
+          </button>
         </nav>
       </>
     );
