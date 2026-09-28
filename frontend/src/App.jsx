@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import NavMenu from "./components/NavMenu";
 import RostersPage from "./pages/RostersPage";
+import RosterLink from "./components/RosterLink";
 import TeamRosterPage from "./pages/TeamRosterPage";
 import SearchPage from "./pages/SearchPage";
 import PlayerPage from "./pages/PlayerPage";
@@ -173,9 +174,9 @@ function App() {
         />
 
         <nav className="acwr-info-link">
-          <button type="button" onClick={() => setView("acwr-info")}>
+          <RosterLink onClick={() => setView("acwr-info")}>
             What is ACWR?
-          </button>
+          </RosterLink>
         </nav>
       </>
     );
