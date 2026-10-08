@@ -91,6 +91,29 @@ class PlayerServiceTest {
     }
 
     @Test
+    void getAllPlayers_everyTeamHasAFullDefensiveLineup() {
+        // Arrange — the formation page places two DEs, three CBs, one FS, and one SS. Number of LBs and DTs depends on formation, so we don't check those.
+        List<String> singlePositions = List.of("FS", "SS");
+
+        // Act
+        Map<String, List<Player>> playersByTeam = playerService.getAllPlayers().stream()
+            .collect(Collectors.groupingBy(Player::getTeam));
+
+        // Assert
+        for (Map.Entry<String, List<Player>> team : playersByTeam.entrySet()) {
+            Map<String, Long> positionCounts = team.getValue().stream()
+                .collect(Collectors.groupingBy(Player::getPosition, Collectors.counting()));
+
+            for (String position : singlePositions) {
+                assertEquals(1L, positionCounts.getOrDefault(position, 0L),
+                    team.getKey() + " should have exactly one " + position);
+            }
+            assertEquals(2L, positionCounts.getOrDefault("DE", 0L), team.getKey() + " should have two DEs");
+            assertEquals(3L, positionCounts.getOrDefault("CB", 0L), team.getKey() + " should have three CBs");
+        }
+    }
+
+    @Test
     void getAllPlayers_snapCountsAreValidForAcwr() {
         // Act
         List<Player> players = playerService.getAllPlayers();
