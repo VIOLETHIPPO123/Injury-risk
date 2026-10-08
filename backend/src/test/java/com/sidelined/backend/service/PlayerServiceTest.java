@@ -114,6 +114,27 @@ class PlayerServiceTest {
     }
 
     @Test
+    void getAllPlayers_everyTeamHasAFullSpecialTeamsLineup() {
+        // Arrange — the formation page places one of each of these.
+        List<String> singlePositions = List.of("PK", "P", "H", "PR", "KR", "LS");
+
+        // Act
+        Map<String, List<Player>> playersByTeam = playerService.getAllPlayers().stream()
+            .collect(Collectors.groupingBy(Player::getTeam));
+
+        // Assert
+        for (Map.Entry<String, List<Player>> team : playersByTeam.entrySet()) {
+            Map<String, Long> positionCounts = team.getValue().stream()
+                .collect(Collectors.groupingBy(Player::getPosition, Collectors.counting()));
+
+            for (String position : singlePositions) {
+                assertEquals(1L, positionCounts.getOrDefault(position, 0L),
+                    team.getKey() + " should have exactly one " + position);
+            }
+        }
+    }
+
+    @Test
     void getAllPlayers_snapCountsAreValidForAcwr() {
         // Act
         List<Player> players = playerService.getAllPlayers();
