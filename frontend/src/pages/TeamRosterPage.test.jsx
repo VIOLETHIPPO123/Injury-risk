@@ -316,3 +316,20 @@ test("clicking a defender passes that player's full data to the click handler", 
     expect.objectContaining({ id: 373, name: "Budda Baker", position: "SS" }),
   );
 });
+
+test("with no unit selected, offense and defense lineups both render", () => {
+  // Arrange
+  const players = [...ARI_STARTERS, ...ARI_DEFENSE];
+
+  // Act
+  const { container } = render(
+    <TeamRosterPage team="ARI" players={players} onPlayerClick={vi.fn()} />,
+  );
+
+  // Assert
+  expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(
+    ARI_STARTERS.length + ARI_DEFENSE.length,
+  );
+  expect(container.querySelector(".offense-formation")).toBeInTheDocument();
+  expect(container.querySelector(".defense-formation")).toBeInTheDocument();
+});

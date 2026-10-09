@@ -10,13 +10,9 @@ function TeamRosterPage({
   onPlayerClick,
   watchlistedIds = new Set(),
   onAddToWatchlist,
-  unit = "defense", // offense, defense or special-teams
+  unit = "both", // TEMP: "offense" | "defense" | "both". Becomes "offense" with the toggle.
 }) {
   const teamPlayers = players.filter((p) => p.team === team);
-  const formation =
-    unit === "defense"
-      ? createDefenseFormation(teamPlayers)
-      : createFormation(teamPlayers);
 
   const renderRow = (rowPlayers, className) =>
     rowPlayers &&
@@ -34,16 +30,27 @@ function TeamRosterPage({
       </div>
     );
 
+  const renderFormation = (formation, className) => (
+    <div className={`player-grid ${className}`}>
+      {renderRow(formation.topRow, "top-row")}
+      {renderRow(formation.middleRow, "middle-row")}
+      {renderRow(formation.bottomRow, "bottom-row")}
+    </div>
+  );
+
   return (
     <section className="team-roster-page">
       <RosterLink onClick={onBack}>Back to teams</RosterLink>
       <h1>{team}</h1>
 
-      <div className="player-grid">
-        {renderRow(formation.topRow, "top-row")}
-        {renderRow(formation.middleRow, "middle-row")}
-        {renderRow(formation.bottomRow, "bottom-row")}
-      </div>
+      {(unit === "offense" || unit === "both") &&
+        renderFormation(createFormation(teamPlayers), "offense-formation")}
+
+      {(unit === "defense" || unit === "both") &&
+        renderFormation(
+          createDefenseFormation(teamPlayers),
+          "defense-formation",
+        )}
     </section>
   );
 }
