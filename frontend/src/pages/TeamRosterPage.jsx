@@ -1,6 +1,10 @@
 import PlayerCard from "../components/PlayerCard";
 import RosterLink from "../components/RosterLink";
-import { createFormation, createDefenseFormation } from "../utils/formation";
+import {
+  createFormation,
+  createDefenseFormation,
+  createSpecialTeamsFormation,
+} from "../utils/formation";
 import "./TeamRosterPage.css";
 
 function TeamRosterPage({
@@ -10,7 +14,7 @@ function TeamRosterPage({
   onPlayerClick,
   watchlistedIds = new Set(),
   onAddToWatchlist,
-  unit = "both", // TEMP: "offense" | "defense" | "both". Becomes "offense" with the toggle.
+  unit = "all", // TEMP: "offense" | "defense" | "special-teams" | "all"
 }) {
   const teamPlayers = players.filter((p) => p.team === team);
 
@@ -43,13 +47,19 @@ function TeamRosterPage({
       <RosterLink onClick={onBack}>Back to teams</RosterLink>
       <h1>{team}</h1>
 
-      {(unit === "offense" || unit === "both") &&
+      {(unit === "offense" || unit === "all") &&
         renderFormation(createFormation(teamPlayers), "offense-formation")}
 
-      {(unit === "defense" || unit === "both") &&
+      {(unit === "defense" || unit === "all") &&
         renderFormation(
           createDefenseFormation(teamPlayers),
           "defense-formation",
+        )}
+
+      {(unit === "special-teams" || unit === "all") &&
+        renderFormation(
+          createSpecialTeamsFormation(teamPlayers),
+          "special-teams-formation",
         )}
     </section>
   );

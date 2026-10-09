@@ -208,9 +208,9 @@ const DEN_DEFENSE = [
   defender(484, "Ja'Quan McMillian", "DEN", "CB"),
 ];
 
-// Reads the player names in one formation row, left to right.
-const namesInRow = (container, rowClass) => {
-  const row = container.querySelector(`.${rowClass}`);
+// Reads the player names in one row of a formation, left to right.
+const namesInRow = (container, formationClass, rowClass) => {
+  const row = container.querySelector(`.${formationClass} .${rowClass}`);
   return within(row)
     .getAllByRole("heading", { level: 2 })
     .map((heading) => heading.textContent);
@@ -245,20 +245,20 @@ test("4-3 defense lays out secondary, linebackers, then defensive line in the Ma
   const { container } = renderDefense("ARI", ARI_DEFENSE);
 
   // Assert — CB1, nickelback, FS, SS, CB2
-  expect(namesInRow(container, "top-row")).toEqual([
+  expect(namesInRow(container, "defense-formation", "top-row")).toEqual([
     "Garrett Williams",
     "Max Melton",
     "Andrew Wingard",
     "Budda Baker",
     "Denzel Burke",
   ]);
-  expect(namesInRow(container, "middle-row")).toEqual([
+  expect(namesInRow(container, "defense-formation", "middle-row")).toEqual([
     "Jack Gibbens",
     "Mack Wilson Sr.",
     "Zaven Collins",
   ]);
   // DE DT DT DE
-  expect(namesInRow(container, "bottom-row")).toEqual([
+  expect(namesInRow(container, "defense-formation", "bottom-row")).toEqual([
     "Josh Sweat",
     "Roy Lopez",
     "Walter Nolen III",
@@ -271,16 +271,18 @@ test("3-4 defense shows four linebackers and a three-man line", () => {
   const { container } = renderDefense("DEN", DEN_DEFENSE);
 
   // Assert
-  expect(namesInRow(container, "top-row")).toEqual([
+  expect(namesInRow(container, "defense-formation", "top-row")).toEqual([
     "Pat Surtain II",
     "Ja'Quan McMillian",
     "Brandon Jones",
     "Talanoa Hufanga",
     "Riley Moss",
   ]);
-  expect(namesInRow(container, "middle-row")).toHaveLength(4);
+  expect(namesInRow(container, "defense-formation", "middle-row")).toHaveLength(
+    4,
+  );
   // DE DT DE
-  expect(namesInRow(container, "bottom-row")).toEqual([
+  expect(namesInRow(container, "defense-formation", "bottom-row")).toEqual([
     "Zach Allen",
     "D.J. Jones",
     "Eyioma Uwazurike",
@@ -292,7 +294,9 @@ test("the last cornerback in the data lands in the nickel slot, second from the 
   const { container } = renderDefense("ARI", ARI_DEFENSE);
 
   // Assert
-  expect(namesInRow(container, "top-row")[1]).toBe("Max Melton");
+  expect(namesInRow(container, "defense-formation", "top-row")[1]).toBe(
+    "Max Melton",
+  );
 });
 
 test("clicking a defender passes that player's full data to the click handler", () => {
@@ -317,19 +321,90 @@ test("clicking a defender passes that player's full data to the click handler", 
   );
 });
 
-test("with no unit selected, offense and defense lineups both render", () => {
-  // Arrange
-  const players = [...ARI_STARTERS, ...ARI_DEFENSE];
+// Special teams tests
 
-  // Act
-  const { container } = render(
-    <TeamRosterPage team="ARI" players={players} onPlayerClick={vi.fn()} />,
+// Small factory so the special teams fixtures stay readable.
+const specialist = (id, name, team, position) => ({
+  id,
+  name,
+  team,
+  position,
+  snapsLastGame: 10,
+  snapsLast4Games: 40,
+});
+
+// Each team has 6 specialists: PK, P, H, PR, KR, LS. IDs and order follow PlayerService.
+const ARI_SPECIAL_TEAMS = [
+  specialist(749, "Chad Ryland", "ARI", "PK"),
+  specialist(750, "Blake Gillikin", "ARI", "P"),
+  specialist(751, "Blake Gillikin", "ARI", "H"),
+  specialist(752, "Devin Duvernay", "ARI", "PR"),
+  specialist(753, "Devin Duvernay", "ARI", "KR"),
+  specialist(754, "Casey Kreiter", "ARI", "LS"),
+];
+
+const renderSpecialTeams = (team, players) => {
+  return render(
+    <TeamRosterPage
+      team={team}
+      players={players}
+      unit="special-teams"
+      onPlayerClick={vi.fn()}
+    />,
   );
+};
+
+test("special teams lineup renders one row in PK, P, H, PR, KR, LS order", () => {
+  // Act
+  const { container } = renderSpecialTeams("ARI", ARI_SPECIAL_TEAMS);
 
   // Assert
-  expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(
-    ARI_STARTERS.length + ARI_DEFENSE.length,
-  );
-  expect(container.querySelector(".offense-formation")).toBeInTheDocument();
-  expect(container.querySelector(".defense-formation")).toBeInTheDocument();
+  expect(
+    container.querySelector(".special-teams-formation"),
+  ).toBeInTheDocument();
+  expect(namesInRow(container, "special-teams-formation", "top-row")).toEqual([
+    "Chad Ryland", // PK
+    "Blake Gillikin", // P
+    "Blake Gillikin", // H
+    "Devin Duvernay", // PR
+    "Devin Duvernay", // KR
+    "Casey Kreiter", // LS
+  ]);
+});
+
+test("special teams view renders six cards and excludes other teams", () => {
+  // Arrange
+  const players = [
+    ...ARI_SPECIAL_TEAMS,
+    specialist(755, "Nick Folk", "ATL", "PK"),
+  ];
+
+  // Act
+  renderSpecialTeams("ARI", players);
+
+  // Assert
+  expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(6);
+  expect(screen.queryByText("Nick Folk")).not.toBeInTheDocument();
+});
+
+test("a returner who also starts on offense shows only as PR and KR in the special teams view", () => {
+  // Arrange: Barion Brown is NO's WR and also its PR/KR
+  const players = [
+    specialist(255, "Barion Brown", "NO", "WR"),
+    specialist(1, "Daniel Carlson", "NO", "PK"),
+    specialist(2, "Ryan Wright", "NO", "P"),
+    specialist(3, "Ryan Wright", "NO", "H"),
+    specialist(4, "Barion Brown", "NO", "PR"),
+    specialist(5, "Barion Brown", "NO", "KR"),
+    specialist(6, "Cal Adomitis", "NO", "LS"),
+  ];
+
+  // Act
+  const { container } = renderSpecialTeams("NO", players);
+
+  // Assert
+  expect(
+    namesInRow(container, "special-teams-formation", "top-row"),
+  ).toHaveLength(6);
+  expect(screen.getAllByText("Barion Brown")).toHaveLength(2); // PR and KR, not the WR row
 });

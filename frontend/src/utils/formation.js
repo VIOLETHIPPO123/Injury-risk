@@ -71,4 +71,21 @@ function createDefenseFormation(teamPlayers) {
   };
 }
 
-export { createFormation, createDefenseFormation };
+// Special Teams formation creation
+// Outputs one row of 6 players: PK, P, H, PR, KR, LS
+function createSpecialTeamsFormation(teamPlayers) {
+  const byPosition = groupByPosition(teamPlayers);
+
+  return {
+    topRow: [
+      byPosition.PK?.[0],
+      byPosition.P?.[0],
+      byPosition.H?.[0],
+      byPosition.PR?.[0],
+      byPosition.KR?.[0],
+      byPosition.LS?.[0],
+    ].filter(Boolean),
+  };
+}
+
+export { createFormation, createDefenseFormation, createSpecialTeamsFormation };
