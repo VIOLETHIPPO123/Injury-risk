@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
 import TeamRosterPage from "./TeamRosterPage";
 
@@ -161,4 +161,175 @@ test("clicking a different mini player card passes that player's own data, not a
   expect(handlePlayerClick).toHaveBeenCalledWith(
     expect.objectContaining({ id: 3, name: "Trey McBride", position: "TE" }),
   );
+});
+
+// Defense tests
+
+// Small factory so the defense fixtures stay readable.
+const defender = (id, name, team, position) => ({
+  id,
+  name,
+  team,
+  position,
+  snapsLastGame: 50,
+  snapsLast4Games: 200,
+});
+
+// 4-3 front: 4 DL, 3 LB, 3 CB, 2 S. IDs and order follow PlayerService, so the
+// last CB listed (Max Melton) is the nickelback.
+const ARI_DEFENSE = [
+  defender(365, "Josh Sweat", "ARI", "DE"),
+  defender(366, "Roy Lopez", "ARI", "DT"),
+  defender(367, "Walter Nolen III", "ARI", "DT"),
+  defender(368, "Dante Stills", "ARI", "DE"),
+  defender(369, "Jack Gibbens", "ARI", "LB"),
+  defender(370, "Mack Wilson Sr.", "ARI", "LB"),
+  defender(371, "Zaven Collins", "ARI", "LB"),
+  defender(372, "Garrett Williams", "ARI", "CB"),
+  defender(373, "Budda Baker", "ARI", "SS"),
+  defender(374, "Andrew Wingard", "ARI", "FS"),
+  defender(375, "Denzel Burke", "ARI", "CB"),
+  defender(376, "Max Melton", "ARI", "CB"),
+];
+
+// 3-4 front: 3 DL, 4 LB, 3 CB, 2 S.
+const DEN_DEFENSE = [
+  defender(473, "Zach Allen", "DEN", "DE"),
+  defender(474, "D.J. Jones", "DEN", "DT"),
+  defender(475, "Eyioma Uwazurike", "DEN", "DE"),
+  defender(476, "Jonah Elliss", "DEN", "LB"),
+  defender(477, "Alex Singleton", "DEN", "LB"),
+  defender(478, "Justin Strnad", "DEN", "LB"),
+  defender(479, "Nik Bonitto", "DEN", "LB"),
+  defender(480, "Pat Surtain II", "DEN", "CB"),
+  defender(481, "Talanoa Hufanga", "DEN", "SS"),
+  defender(482, "Brandon Jones", "DEN", "FS"),
+  defender(483, "Riley Moss", "DEN", "CB"),
+  defender(484, "Ja'Quan McMillian", "DEN", "CB"),
+];
+
+// Reads the player names in one formation row, left to right.
+const namesInRow = (container, rowClass) => {
+  const row = container.querySelector(`.${rowClass}`);
+  return within(row)
+    .getAllByRole("heading", { level: 2 })
+    .map((heading) => heading.textContent);
+};
+
+const renderDefense = (team, players) =>
+  render(
+    <TeamRosterPage
+      team={team}
+      players={players}
+      unit="defense"
+      onPlayerClick={vi.fn()}
+    />,
+  );
+
+test("defense view renders every defender for the team and excludes other teams", () => {
+  // Arrange
+  const players = [...ARI_DEFENSE, ...DEN_DEFENSE];
+
+  // Act
+  renderDefense("ARI", players);
+
+  // Assert
+  expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(
+    ARI_DEFENSE.length,
+  );
+  expect(screen.queryByText("Pat Surtain II")).not.toBeInTheDocument();
+});
+
+test("4-3 defense lays out secondary, linebackers, then defensive line in the Madden order", () => {
+  // Act
+  const { container } = renderDefense("ARI", ARI_DEFENSE);
+
+  // Assert — CB1, nickelback, FS, SS, CB2
+  expect(namesInRow(container, "top-row")).toEqual([
+    "Garrett Williams",
+    "Max Melton",
+    "Andrew Wingard",
+    "Budda Baker",
+    "Denzel Burke",
+  ]);
+  expect(namesInRow(container, "middle-row")).toEqual([
+    "Jack Gibbens",
+    "Mack Wilson Sr.",
+    "Zaven Collins",
+  ]);
+  // DE DT DT DE
+  expect(namesInRow(container, "bottom-row")).toEqual([
+    "Josh Sweat",
+    "Roy Lopez",
+    "Walter Nolen III",
+    "Dante Stills",
+  ]);
+});
+
+test("3-4 defense shows four linebackers and a three-man line", () => {
+  // Act
+  const { container } = renderDefense("DEN", DEN_DEFENSE);
+
+  // Assert
+  expect(namesInRow(container, "top-row")).toEqual([
+    "Pat Surtain II",
+    "Ja'Quan McMillian",
+    "Brandon Jones",
+    "Talanoa Hufanga",
+    "Riley Moss",
+  ]);
+  expect(namesInRow(container, "middle-row")).toHaveLength(4);
+  // DE DT DE
+  expect(namesInRow(container, "bottom-row")).toEqual([
+    "Zach Allen",
+    "D.J. Jones",
+    "Eyioma Uwazurike",
+  ]);
+});
+
+test("the last cornerback in the data lands in the nickel slot, second from the left", () => {
+  // Act
+  const { container } = renderDefense("ARI", ARI_DEFENSE);
+
+  // Assert
+  expect(namesInRow(container, "top-row")[1]).toBe("Max Melton");
+});
+
+test("clicking a defender passes that player's full data to the click handler", () => {
+  // Arrange
+  const handlePlayerClick = vi.fn();
+  render(
+    <TeamRosterPage
+      team="ARI"
+      players={ARI_DEFENSE}
+      unit="defense"
+      onPlayerClick={handlePlayerClick}
+    />,
+  );
+
+  // Act
+  fireEvent.click(screen.getByText("Budda Baker"));
+
+  // Assert
+  expect(handlePlayerClick).toHaveBeenCalledTimes(1);
+  expect(handlePlayerClick).toHaveBeenCalledWith(
+    expect.objectContaining({ id: 373, name: "Budda Baker", position: "SS" }),
+  );
+});
+
+test("with no unit selected, offense and defense lineups both render", () => {
+  // Arrange
+  const players = [...ARI_STARTERS, ...ARI_DEFENSE];
+
+  // Act
+  const { container } = render(
+    <TeamRosterPage team="ARI" players={players} onPlayerClick={vi.fn()} />,
+  );
+
+  // Assert
+  expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(
+    ARI_STARTERS.length + ARI_DEFENSE.length,
+  );
+  expect(container.querySelector(".offense-formation")).toBeInTheDocument();
+  expect(container.querySelector(".defense-formation")).toBeInTheDocument();
 });

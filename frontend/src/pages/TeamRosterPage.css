@@ -9,6 +9,7 @@
 
 .team-roster-page .player-grid {
   width: fit-content;
+  max-width: 100%;
   margin: 0 auto;
 
   display: flex;
@@ -18,6 +19,7 @@
 
 .team-roster-page .formation-row {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 16px;
 }
