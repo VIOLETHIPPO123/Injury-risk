@@ -1,3 +1,4 @@
+import { useState } from "react";
 import PlayerCard from "../components/PlayerCard";
 import RosterLink from "../components/RosterLink";
 import {
@@ -7,16 +8,30 @@ import {
 } from "../utils/formation";
 import "./TeamRosterPage.css";
 
-function TeamRosterPage({
+const UNITS = [
+  { id: "offense", label: "Offense", buildFormation: createFormation },
+  { id: "defense", label: "Defense", buildFormation: createDefenseFormation },
+  {
+    id: "special-teams",
+    label: "Special Teams",
+    buildFormation: createSpecialTeamsFormation,
+  },
+];
+
+function TeamRosterContent({
   team,
   players,
   onBack,
   onPlayerClick,
   watchlistedIds = new Set(),
   onAddToWatchlist,
-  unit = "all", // TEMP: "offense" | "defense" | "special-teams" | "all"
+  unit: initialUnit = "offense",
 }) {
+  const [selectedUnit, setSelectedUnit] = useState(initialUnit);
+
   const teamPlayers = players.filter((p) => p.team === team);
+  const active = UNITS.find((u) => u.id === selectedUnit) ?? UNITS[0];
+  const formation = active.buildFormation(teamPlayers);
 
   const renderRow = (rowPlayers, className) =>
     rowPlayers &&
@@ -34,35 +49,36 @@ function TeamRosterPage({
       </div>
     );
 
-  const renderFormation = (formation, className) => (
-    <div className={`player-grid ${className}`}>
-      {renderRow(formation.topRow, "top-row")}
-      {renderRow(formation.middleRow, "middle-row")}
-      {renderRow(formation.bottomRow, "bottom-row")}
-    </div>
-  );
-
   return (
     <section className="team-roster-page">
       <RosterLink onClick={onBack}>Back to teams</RosterLink>
       <h1>{team}</h1>
 
-      {(unit === "offense" || unit === "all") &&
-        renderFormation(createFormation(teamPlayers), "offense-formation")}
+      <div className="unit-toggle" role="group" aria-label="Lineup unit">
+        {UNITS.map((u) => (
+          <button
+            key={u.id}
+            type="button"
+            className={`unit-toggle-button ${u.id === active.id ? "active" : ""}`}
+            aria-pressed={u.id === active.id}
+            onClick={() => setSelectedUnit(u.id)}
+          >
+            {u.label}
+          </button>
+        ))}
+      </div>
 
-      {(unit === "defense" || unit === "all") &&
-        renderFormation(
-          createDefenseFormation(teamPlayers),
-          "defense-formation",
-        )}
-
-      {(unit === "special-teams" || unit === "all") &&
-        renderFormation(
-          createSpecialTeamsFormation(teamPlayers),
-          "special-teams-formation",
-        )}
+      <div className={`player-grid ${active.id}-formation`}>
+        {renderRow(formation.topRow, "top-row")}
+        {renderRow(formation.middleRow, "middle-row")}
+        {renderRow(formation.bottomRow, "bottom-row")}
+      </div>
     </section>
   );
+}
+
+function TeamRosterPage(props) {
+  return <TeamRosterContent key={props.team} {...props} />;
 }
 
 export default TeamRosterPage;

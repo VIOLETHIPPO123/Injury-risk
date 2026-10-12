@@ -408,3 +408,85 @@ test("a returner who also starts on offense shows only as PR and KR in the speci
   ).toHaveLength(6);
   expect(screen.getAllByText("Barion Brown")).toHaveLength(2); // PR and KR, not the WR row
 });
+
+// Unit toggle tests
+test("toggle defaults to offense", () => {
+  // Act
+  const { container } = render(
+    <TeamRosterPage
+      team="ARI"
+      players={[...ARI_STARTERS, ...ARI_DEFENSE, ...ARI_SPECIAL_TEAMS]}
+      onPlayerClick={vi.fn()}
+    />,
+  );
+
+  // Assert
+  expect(container.querySelector(".offense-formation")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Offense" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  expect(screen.getByRole("button", { name: "Defense" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  expect(screen.getByRole("button", { name: "Special Teams" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+});
+
+test("toggle switches between offense, defense and special teams lineups", () => {
+  // Arrange
+  const { container } = render(
+    <TeamRosterPage
+      team="ARI"
+      players={[...ARI_STARTERS, ...ARI_DEFENSE, ...ARI_SPECIAL_TEAMS]}
+      onPlayerClick={vi.fn()}
+    />,
+  );
+
+  // Act + Assert: defense
+  fireEvent.click(screen.getByRole("button", { name: "Defense" }));
+  expect(container.querySelector(".defense-formation")).toBeInTheDocument();
+  expect(container.querySelector(".offense-formation")).not.toBeInTheDocument();
+  expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(
+    ARI_DEFENSE.length,
+  );
+
+  // Act + Assert: special teams
+  fireEvent.click(screen.getByRole("button", { name: "Special Teams" }));
+  expect(
+    container.querySelector(".special-teams-formation"),
+  ).toBeInTheDocument();
+  expect(container.querySelector(".defense-formation")).not.toBeInTheDocument();
+  expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(
+    ARI_SPECIAL_TEAMS.length,
+  );
+
+  // Act + Assert: back to offense
+  fireEvent.click(screen.getByRole("button", { name: "Offense" }));
+  expect(container.querySelector(".offense-formation")).toBeInTheDocument();
+});
+
+test("switching to a different team resets the toggle to offense", () => {
+  // Arrange
+  const players = [...ARI_STARTERS, ...ARI_DEFENSE, ...DEN_DEFENSE];
+  const { container, rerender } = render(
+    <TeamRosterPage team="ARI" players={players} onPlayerClick={vi.fn()} />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Defense" }));
+  expect(container.querySelector(".defense-formation")).toBeInTheDocument();
+
+  // Act
+  rerender(
+    <TeamRosterPage team="DEN" players={players} onPlayerClick={vi.fn()} />,
+  );
+
+  // Assert
+  expect(container.querySelector(".offense-formation")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Offense" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+});
