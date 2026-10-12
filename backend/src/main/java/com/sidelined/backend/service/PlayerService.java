@@ -8,7 +8,12 @@ import org.springframework.stereotype.Service;
 import com.sidelined.backend.model.Player;
 
 @Service
-public class PlayerService {
+public class PlayerService implements PlayerLookup {
+
+    @Override
+    public boolean existsById(Long playerId) {
+        return getAllPlayers().stream().anyMatch(player -> player.getId().equals(playerId));
+    }
 
     // Starting offensive lineups for eachteam for the 2026-27 season. Names and teams are real;
     // snap counts are illustrative placeholders until real game data is wired in.

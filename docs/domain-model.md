@@ -54,9 +54,10 @@ Hardcoded list of all 32 NFL teams in `TeamService` (`GET /teams`).
 | playerId | Long | References `Player.id`; validated to exist on create |
 | note | String | Free text; the only field that's editable after creation |
 
-Persisted in `WatchlistRepository`, an in-memory `ConcurrentHashMap`
-(comment confirms: "until a database is wired in. Data resets when the
-backend restarts"). Full CRUD exists except a list/`GET` endpoint. No
+Persisted through the `WatchlistRepository` interface. Today's
+implementation, `InMemoryWatchlistRepository`, is an in-memory
+`ConcurrentHashMap` (comment confirms: "until a database is wired in. Data
+resets when the backend restarts"). Full CRUD exists except a list/`GET` endpoint. No
 `userId` field — this is currently a single global watchlist, not
 per-user (see **User**, below).
 

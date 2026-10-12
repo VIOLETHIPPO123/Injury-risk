@@ -1,22 +1,25 @@
 package com.sidelined.backend.service;
 
+import com.sidelined.backend.exception.WatchlistEntryNotFoundException;
 import com.sidelined.backend.model.WatchlistEntry;
 import com.sidelined.backend.repository.WatchlistRepository;
-import org.springframework.http.HttpStatus;
+import com.sidelined.backend.validation.WatchlistEntryValidator;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 import java.util.Comparator;
 import java.util.List;
 
 @Service
 public class WatchlistService {
 
+    // DIP: depends on abstractions. Swapping in a database never touches this class.
     private final WatchlistRepository watchlistRepository;
-    private final PlayerService playerService;
+    // OCP: every validator Spring finds. A new rule is a new class, not an edit here.
+    private final List<WatchlistEntryValidator> validators;
 
-    public WatchlistService(WatchlistRepository watchlistRepository, PlayerService playerService) {
+    public WatchlistService(WatchlistRepository watchlistRepository,
+                            List<WatchlistEntryValidator> validators) {
         this.watchlistRepository = watchlistRepository;
-        this.playerService = playerService;
+        this.validators = validators;
     }
 
     // Oldest first, so the watchlist page keeps a stable order as entries are added.
@@ -27,11 +30,7 @@ public class WatchlistService {
     }
 
     public WatchlistEntry createEntry(WatchlistEntry request) {
-        boolean playerExists = playerService.getAllPlayers().stream()
-            .anyMatch(player -> player.getId().equals(request.getPlayerId()));
-        if (!playerExists) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Player not found");
-        }
+        validators.forEach(validator -> validator.validate(request));
 
         // The repository assigns ids; ignore any the client sent.
         WatchlistEntry entry = new WatchlistEntry(null, request.getPlayerId(), request.getNote());
@@ -39,8 +38,9 @@ public class WatchlistService {
     }
 
     public WatchlistEntry updateEntry(Long id, WatchlistEntry changes) {
+        // SRP: a domain exception. ApiExceptionHandler decides it becomes a 404.
         WatchlistEntry existing = watchlistRepository.findById(id)
-            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Watchlist entry not found"));
+            .orElseThrow(() -> new WatchlistEntryNotFoundException(id));
 
         // Only the note is editable; playerId stays fixed. A missing note keeps the current one.
         if (changes.getNote() != null) {
@@ -51,7 +51,7 @@ public class WatchlistService {
 
     public void deleteEntry(Long id) {
         if (!watchlistRepository.deleteById(id)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Watchlist entry not found");
+            throw new WatchlistEntryNotFoundException(id);
         }
     }
 }
