@@ -1,16 +1,16 @@
 package com.sidelined.backend.service;
 
-import com.sidelined.backend.model.Player;
+import com.sidelined.backend.exception.PlayerNotFoundException;
+import com.sidelined.backend.exception.WatchlistEntryNotFoundException;
 import com.sidelined.backend.model.WatchlistEntry;
 import com.sidelined.backend.repository.WatchlistRepository;
+import com.sidelined.backend.validation.WatchlistEntryValidator;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.Optional;
 
@@ -25,12 +25,14 @@ class WatchlistServiceTest {
     private WatchlistRepository watchlistRepository;
 
     @Mock
-    private PlayerService playerService;
+    private WatchlistEntryValidator validator;
 
-    @InjectMocks
     private WatchlistService watchlistService;
 
-    private static final Player KNOWN_PLAYER = new Player(1L, "Jacoby Brissett", "ARI", "QB", 68, 253);
+    @BeforeEach
+    void setUp() {
+        watchlistService = new WatchlistService(watchlistRepository, List.of(validator));
+    }
 
     // Mimics the real repository: assigns id 42 to any entry saved without one.
     private void stubSaveAssigningId() {
@@ -76,7 +78,6 @@ class WatchlistServiceTest {
     @Test
     void createEntry_validPlayer_savesAndReturnsEntryWithId() {
         // Arrange
-        when(playerService.getAllPlayers()).thenReturn(List.of(KNOWN_PLAYER));
         stubSaveAssigningId();
         WatchlistEntry request = new WatchlistEntry(null, 1L, "Monitor snaps");
 
@@ -93,7 +94,6 @@ class WatchlistServiceTest {
     @Test
     void createEntry_clientSuppliedId_isIgnored() {
         // Arrange
-        when(playerService.getAllPlayers()).thenReturn(List.of(KNOWN_PLAYER));
         stubSaveAssigningId();
         WatchlistEntry request = new WatchlistEntry(999L, 1L, "Trying to pick my own id");
         ArgumentCaptor<WatchlistEntry> captor = ArgumentCaptor.forClass(WatchlistEntry.class);
@@ -108,17 +108,13 @@ class WatchlistServiceTest {
     }
 
     @Test
-    void createEntry_unknownPlayer_throwsNotFound() {
+    void createEntry_validatorRejects_doesNotSave() {
         // Arrange
-        when(playerService.getAllPlayers()).thenReturn(List.of(KNOWN_PLAYER));
         WatchlistEntry request = new WatchlistEntry(null, 9999L, "No such player");
+        doThrow(new PlayerNotFoundException(9999L)).when(validator).validate(request);
 
-        // Act
-        ResponseStatusException thrown = assertThrows(ResponseStatusException.class,
-            () -> watchlistService.createEntry(request));
-
-        // Assert
-        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatusCode());
+        // Act + Assert
+        assertThrows(PlayerNotFoundException.class, () -> watchlistService.createEntry(request));
         verify(watchlistRepository, never()).save(any());
     }
 
@@ -165,11 +161,10 @@ class WatchlistServiceTest {
         WatchlistEntry changes = new WatchlistEntry(null, null, "Anything");
 
         // Act
-        ResponseStatusException thrown = assertThrows(ResponseStatusException.class,
+        assertThrows(WatchlistEntryNotFoundException.class,
             () -> watchlistService.updateEntry(999L, changes));
 
         // Assert
-        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatusCode());
         verify(watchlistRepository, never()).save(any());
     }
 
@@ -193,10 +188,7 @@ class WatchlistServiceTest {
         when(watchlistRepository.deleteById(999L)).thenReturn(false);
 
         // Act
-        ResponseStatusException thrown = assertThrows(ResponseStatusException.class,
+        assertThrows(WatchlistEntryNotFoundException.class,
             () -> watchlistService.deleteEntry(999L));
-
-        // Assert
-        assertEquals(HttpStatus.NOT_FOUND, thrown.getStatusCode());
     }
 }
