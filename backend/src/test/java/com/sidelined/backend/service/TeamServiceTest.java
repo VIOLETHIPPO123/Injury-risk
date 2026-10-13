@@ -1,47 +1,30 @@
 package com.sidelined.backend.service;
 
 import com.sidelined.backend.model.Team;
+import com.sidelined.backend.repository.TeamRepository;
 import org.junit.jupiter.api.Test;
 import java.util.List;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
+// The data itself is tested in InMemoryTeamRepositoryTest. Here we only check that the service
+// serves whatever its repository holds, without depending on where the data comes from.
 class TeamServiceTest {
 
-    private final TeamService teamService = new TeamService();
+    private final TeamRepository teamRepository = mock(TeamRepository.class);
+    private final TeamService teamService = new TeamService(teamRepository);
 
     @Test
-    void getAllTeams_returnsAll32NflTeams() {
-        // Act
-        List<Team> teams = teamService.getAllTeams();
-
-        // Assert
-        assertEquals(32, teams.size());
-    }
-
-    @Test
-    void getAllTeams_everyCodeIsUnique() {
+    void getAllTeams_returnsWhatTheRepositoryHolds() {
         // Arrange
-        List<Team> teams = teamService.getAllTeams();
+        List<Team> stored = List.of(new Team("ARI", "Arizona Cardinals"));
+        when(teamRepository.findAll()).thenReturn(stored);
 
         // Act
-        Set<String> uniqueCodes = teams.stream().map(Team::getCode).collect(Collectors.toSet());
+        List<Team> result = teamService.getAllTeams();
 
         // Assert
-        assertEquals(teams.size(), uniqueCodes.size());
-    }
-
-    @Test
-    void getAllTeams_everyTeamHasACodeAndName() {
-        // Act
-        List<Team> teams = teamService.getAllTeams();
-
-        // Assert
-        for (Team team : teams) {
-            assertFalse(team.getCode() == null || team.getCode().isBlank());
-            assertFalse(team.getName() == null || team.getName().isBlank(), "Missing name for " + team.getCode());
-        }
+        assertEquals(stored, result);
     }
 }

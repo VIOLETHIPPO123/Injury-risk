@@ -50,8 +50,9 @@ public class WatchlistService {
     }
 
     public void deleteEntry(Long id) {
-        if (!watchlistRepository.deleteById(id)) {
+        if (!watchlistRepository.existsById(id)) {
             throw new WatchlistEntryNotFoundException(id);
         }
+        watchlistRepository.deleteById(id);
     }
 }
