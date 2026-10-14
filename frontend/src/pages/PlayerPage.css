@@ -108,7 +108,7 @@
   top: 0;
   right: 0;
   z-index: 10;
-  width: min(360px, 100vw);
+  width: min(420px, 100vw);
   height: 100vh;
   box-sizing: border-box;
   padding: 24px;
@@ -180,6 +180,68 @@
 
 .compare-panel-empty {
   margin-top: 20px;
+}
+
+.compare-panel-list .btn {
+  align-self: flex-start;
+  margin-top: 6px;
+  padding: 6px 14px;
+  font-size: 14px;
+}
+
+.compare-panel-list .btn:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.side-by-side {
+  margin-top: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.side-by-side table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.side-by-side th,
+.side-by-side td {
+  padding: 8px 6px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border);
+}
+
+.side-by-side thead th {
+  color: var(--text-h);
+}
+
+.side-by-side tbody th {
+  font-weight: 400;
+  font-size: 12px;
+}
+
+.side-by-side td.riskier {
+  color: var(--risk-high);
+  background: color-mix(in srgb, var(--risk-high) 12%, transparent);
+  font-weight: 600;
+}
+
+.side-by-side-verdict {
+  margin: 16px 0 12px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .player-page-note {

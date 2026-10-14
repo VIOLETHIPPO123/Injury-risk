@@ -2,12 +2,54 @@ import { useState } from "react";
 import Button from "../components/Button";
 import RosterLink from "../components/RosterLink";
 import { calculateAcwr, riskLevel } from "../utils/acwr";
+import { compareVerdict, comparisonRows } from "../utils/comparison";
 import { compareCandidates, positionGroup } from "../utils/positionGroup";
 import "./PlayerPage.css";
 
+function SideBySide({ player, other, onClear }) {
+  const rows = comparisonRows(player, other);
+
+  return (
+    <section className="side-by-side" aria-label="Side-by-side comparison">
+      <table>
+        <thead>
+          <tr>
+            <td />
+            <th scope="col">{player.name}</th>
+            <th scope="col">{other.name}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.label}>
+              <th scope="row">{row.label}</th>
+              {row.values.map((value, column) => (
+                <td
+                  key={column}
+                  className={row.riskier === column ? "riskier" : undefined}
+                >
+                  {value}
+                  {row.riskier === column && (
+                    <span className="visually-hidden"> (riskier)</span>
+                  )}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="side-by-side-verdict">{compareVerdict(player, other)}</p>
+      <Button onClick={onClear}>Clear comparison</Button>
+    </section>
+  );
+}
+
 function ComparePanel({ player, watchlistedPlayers, onClose }) {
+  const [comparedId, setComparedId] = useState(null);
   const group = positionGroup(player.position);
   const candidates = compareCandidates(player, watchlistedPlayers);
+  // Looked up each render, so a player taken off the watchlist drops out of the comparison.
+  const compared = candidates.find((other) => other.id === comparedId);
 
   return (
     <aside className="compare-panel" aria-label="Compare with watchlist">
@@ -15,6 +57,14 @@ function ComparePanel({ player, watchlistedPlayers, onClose }) {
         <h2>Compare {group}</h2>
         <Button onClick={onClose}>Close</Button>
       </div>
+
+      {compared && (
+        <SideBySide
+          player={player}
+          other={compared}
+          onClear={() => setComparedId(null)}
+        />
+      )}
 
       {candidates.length > 0 ? (
         <ul className="compare-panel-list">
@@ -33,6 +83,13 @@ function ComparePanel({ player, watchlistedPlayers, onClose }) {
                 <span className="compare-panel-acwr">
                   ACWR {acwr === null ? "—" : acwr.toFixed(2)} · {risk.label}
                 </span>
+                <Button
+                  aria-label={`Compare with ${other.name}`}
+                  disabled={other.id === comparedId}
+                  onClick={() => setComparedId(other.id)}
+                >
+                  {other.id === comparedId ? "Comparing" : "Compare"}
+                </Button>
               </li>
             );
           })}

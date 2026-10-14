@@ -81,6 +81,118 @@ describe("PlayerPage compare panel", () => {
     ).toBeInTheDocument();
   });
 
+  describe("side-by-side view", () => {
+    // ACWR: LG 40/65.5 = 0.61 (Ramping up), RT 57/68 = 0.84 (Normal), C 66/65 = 1.02 (Normal).
+    const C = {
+      id: 30,
+      name: "Creed Humphrey",
+      team: "KC",
+      position: "C",
+      snapsLastGame: 66,
+      snapsLast4Games: 260,
+    };
+
+    async function compareWith(name, watchlistedPlayers = [RT, C]) {
+      const user = userEvent.setup();
+      const panel = await openCompare(watchlistedPlayers);
+      await user.click(
+        within(panel).getByRole("button", { name: `Compare with ${name}` }),
+      );
+      return {
+        user,
+        panel,
+        view: within(panel).getByRole("region", {
+          name: "Side-by-side comparison",
+        }),
+      };
+    }
+
+    function cell(view, rowLabel, playerName) {
+      const columns = within(view).getAllByRole("columnheader");
+      const column = columns.findIndex((th) => th.textContent === playerName);
+      const row = within(view).getByRole("rowheader", { name: rowLabel })
+        .parentElement;
+      return within(row).getAllByRole("cell")[column];
+    }
+
+    it("shows all four stats for both players", async () => {
+      const { view } = await compareWith("Jawaan Taylor");
+
+      for (const label of [
+        "ACWR",
+        "Risk tier",
+        "Last game snaps",
+        "4-game average",
+      ]) {
+        expect(
+          within(view).getByRole("rowheader", { name: label }),
+        ).toBeInTheDocument();
+      }
+      expect(cell(view, "ACWR", "Isaac Seumalo")).toHaveTextContent("0.61");
+      expect(cell(view, "ACWR", "Jawaan Taylor")).toHaveTextContent("0.84");
+      expect(cell(view, "Last game snaps", "Jawaan Taylor")).toHaveTextContent(
+        "57",
+      );
+      expect(cell(view, "4-game average", "Isaac Seumalo")).toHaveTextContent(
+        "65.50",
+      );
+    });
+
+    it("highlights the riskier value in each row", async () => {
+      const { view } = await compareWith("Jawaan Taylor");
+
+      // The LG is further from 1.0 and in a higher tier; the RT played more snaps.
+      expect(cell(view, "ACWR", "Isaac Seumalo")).toHaveClass("riskier");
+      expect(cell(view, "Risk tier", "Isaac Seumalo")).toHaveClass("riskier");
+      expect(cell(view, "Last game snaps", "Jawaan Taylor")).toHaveClass(
+        "riskier",
+      );
+      expect(cell(view, "4-game average", "Jawaan Taylor")).toHaveClass(
+        "riskier",
+      );
+      expect(cell(view, "ACWR", "Jawaan Taylor")).not.toHaveClass("riskier");
+    });
+
+    it("names the safer player in the verdict", async () => {
+      const { view } = await compareWith("Jawaan Taylor");
+
+      expect(
+        within(view).getByText("Safer start: Jawaan Taylor."),
+      ).toBeInTheDocument();
+    });
+
+    it("swaps to a different comparison player", async () => {
+      const { user, panel } = await compareWith("Jawaan Taylor");
+
+      await user.click(
+        within(panel).getByRole("button", { name: "Compare with Creed Humphrey" }),
+      );
+
+      const view = within(panel).getByRole("region", {
+        name: "Side-by-side comparison",
+      });
+      expect(
+        within(view).getByRole("columnheader", { name: "Creed Humphrey" }),
+      ).toBeInTheDocument();
+      expect(
+        within(view).queryByRole("columnheader", { name: "Jawaan Taylor" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("clears the comparison", async () => {
+      const { user, panel, view } = await compareWith("Jawaan Taylor");
+
+      await user.click(
+        within(view).getByRole("button", { name: "Clear comparison" }),
+      );
+
+      expect(
+        within(panel).queryByRole("region", { name: "Side-by-side comparison" }),
+      ).not.toBeInTheDocument();
+      expect(within(panel).getByText("Jawaan Taylor")).toBeInTheDocument();
+    });
+  });
+
   it("closes when Close is clicked", async () => {
     const user = userEvent.setup();
     const panel = await openCompare([RT]);
