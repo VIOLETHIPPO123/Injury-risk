@@ -65,6 +65,7 @@ function App() {
   }, []);
 
   const watchlistedIds = new Set(watchlist.map((entry) => entry.playerId));
+  const watchlistedPlayers = players.filter((p) => watchlistedIds.has(p.id));
 
   // Each handler updates local state from the backend's response instead of re-fetching the list.
   function handleAddToWatchlist(playerId) {
@@ -148,6 +149,7 @@ function App() {
     content = (
       <PlayerPage
         player={selectedPlayer}
+        watchlistedPlayers={watchlistedPlayers}
         onBack={() => setView("team-roster")}
       />
     );

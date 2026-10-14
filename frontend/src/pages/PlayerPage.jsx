@@ -1,8 +1,54 @@
+import { useState } from "react";
+import Button from "../components/Button";
 import RosterLink from "../components/RosterLink";
 import { calculateAcwr, riskLevel } from "../utils/acwr";
+import { compareCandidates, positionGroup } from "../utils/positionGroup";
 import "./PlayerPage.css";
 
-function PlayerPage({ player, onBack }) {
+function ComparePanel({ player, watchlistedPlayers, onClose }) {
+  const group = positionGroup(player.position);
+  const candidates = compareCandidates(player, watchlistedPlayers);
+
+  return (
+    <aside className="compare-panel" aria-label="Compare with watchlist">
+      <div className="compare-panel-header">
+        <h2>Compare {group}</h2>
+        <Button onClick={onClose}>Close</Button>
+      </div>
+
+      {candidates.length > 0 ? (
+        <ul className="compare-panel-list">
+          {candidates.map((other) => {
+            const acwr = calculateAcwr(
+              other.snapsLastGame,
+              other.snapsLast4Games,
+            );
+            const risk = riskLevel(acwr);
+            return (
+              <li key={other.id} className={`risk-${risk.tier}`}>
+                <span className="compare-panel-name">{other.name}</span>
+                <span className="compare-panel-meta">
+                  {other.team} · {other.position}
+                </span>
+                <span className="compare-panel-acwr">
+                  ACWR {acwr === null ? "—" : acwr.toFixed(2)} · {risk.label}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="compare-panel-empty">
+          No other {group} players on your watchlist.
+        </p>
+      )}
+    </aside>
+  );
+}
+
+function PlayerPage({ player, watchlistedPlayers = [], onBack }) {
+  const [compareOpen, setCompareOpen] = useState(false);
+
   if (!player) {
     return (
       <section className="player-page">
@@ -27,7 +73,23 @@ function PlayerPage({ player, onBack }) {
           <span className="team">{team}</span>
           <span className="position">{position}</span>
         </div>
+        <div className="player-page-compare">
+          <Button
+            aria-expanded={compareOpen}
+            onClick={() => setCompareOpen(true)}
+          >
+            Compare
+          </Button>
+        </div>
       </header>
+
+      {compareOpen && (
+        <ComparePanel
+          player={player}
+          watchlistedPlayers={watchlistedPlayers}
+          onClose={() => setCompareOpen(false)}
+        />
+      )}
 
       <div className={`player-page-acwr risk-${risk.tier}`}>
         <span className="player-page-acwr-value">
