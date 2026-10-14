@@ -35,9 +35,14 @@ public class InMemoryWatchlistRepository implements WatchlistRepository {
         return Optional.ofNullable(entries.get(id));
     }
 
-    // Returns false when the id was not on the watchlist, so the service can answer 404.
     @Override
-    public boolean deleteById(Long id) {
-        return entries.remove(id) != null;
+    public boolean existsById(Long id) {
+        return entries.containsKey(id);
+    }
+
+    // A missing id is a no-op, as in Spring Data. The service checks existsById first to answer 404.
+    @Override
+    public void deleteById(Long id) {
+        entries.remove(id);
     }
 }
