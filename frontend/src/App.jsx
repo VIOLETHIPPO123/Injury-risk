@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import NavMenu from "./components/NavMenu";
 import RostersPage from "./pages/RostersPage";
-import RosterLink from "./components/RosterLink";
 import TeamRosterPage from "./pages/TeamRosterPage";
 import SearchPage from "./pages/SearchPage";
 import PlayerPage from "./pages/PlayerPage";
@@ -66,6 +65,7 @@ function App() {
   }, []);
 
   const watchlistedIds = new Set(watchlist.map((entry) => entry.playerId));
+  const watchlistedPlayers = players.filter((p) => watchlistedIds.has(p.id));
 
   // Each handler updates local state from the backend's response instead of re-fetching the list.
   function handleAddToWatchlist(playerId) {
@@ -149,6 +149,7 @@ function App() {
     content = (
       <PlayerPage
         player={selectedPlayer}
+        watchlistedPlayers={watchlistedPlayers}
         onBack={() => setView("team-roster")}
       />
     );
@@ -163,22 +164,14 @@ function App() {
     content = <AcwrInfoPage onBack={() => setView("about")} />;
   } else {
     content = (
-      <>
-        <NavMenu
-          items={[
-            { label: "Roster", onClick: () => setView("rosters") },
-            { label: "Search", onClick: () => setView("search") },
-            { label: "Watchlist", onClick: () => setView("watchlist") },
-            { label: "About", onClick: () => setView("about") },
-          ]}
-        />
-
-        <nav className="acwr-info-link">
-          <RosterLink onClick={() => setView("acwr-info")}>
-            What is ACWR?
-          </RosterLink>
-        </nav>
-      </>
+      <NavMenu
+        items={[
+          { label: "Roster", onClick: () => setView("rosters") },
+          { label: "Search", onClick: () => setView("search") },
+          { label: "Watchlist", onClick: () => setView("watchlist") },
+          { label: "About", onClick: () => setView("about") },
+        ]}
+      />
     );
   }
 
