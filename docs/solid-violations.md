@@ -132,8 +132,9 @@ public interface PlayerLookup {
 ```
 
 When the database arrives, a new class implements `WatchlistRepository` and
-Spring injects it; `WatchlistService` doesn't change. (`PlayerLookup` is an
-interim step — DEV-78 replaces it with a full `PlayerRepository`.)
+Spring injects it; `WatchlistService` doesn't change. (`PlayerLookup` was an
+interim step. DEV-78 replaced it with `PlayerRepository` — see
+[Follow-up](#follow-up-dev-78-repository-layer).)
 
 ## 3. Open/Closed Principle
 
@@ -203,5 +204,61 @@ All 28 backend tests pass. New and updated tests:
 - `docs/class-diagram.drawio` is a domain model (`Player`, `Team`,
   `WatchlistEntry`, …) with no services or repositories, so these changes
   don't affect it.
-- `PlayerService` still holds the hard-coded player data. Moving it into a
-  repository is DEV-78.
+- `PlayerService` still held the hard-coded player data. DEV-78 moved it into
+  a repository; see below.
+
+## Follow-up: DEV-78 repository layer
+
+DEV-79 left one SRP problem in place: `PlayerService` and `TeamService` held
+their hard-coded data as well as their service logic. DEV-78 moved the data
+into the repository layer behind a generic contract, split by what a
+repository can do:
+
+```java
+public interface ReadOnlyRepository<T, ID> {
+    List<T> findAll();
+    Optional<T> findById(ID id);
+    boolean existsById(ID id);
+}
+
+public interface ReadWriteRepository<T, ID> extends ReadOnlyRepository<T, ID> {
+    T save(T entity);
+    void deleteById(ID id);
+}
+
+public interface PlayerRepository    extends ReadOnlyRepository<Player, Long> {}
+public interface TeamRepository      extends ReadOnlyRepository<Team, String> {}
+public interface WatchlistRepository extends ReadWriteRepository<WatchlistEntry, Long> {}
+```
+
+| Interface | Today | Planned |
+|---|---|---|
+| `PlayerRepository` | `InMemoryPlayerRepository` | External-API implementation |
+| `TeamRepository` | `InMemoryTeamRepository` | External-API implementation |
+| `WatchlistRepository` | `InMemoryWatchlistRepository` | JPA (database module) |
+
+Why split by capability rather than use one `Repository` with every method:
+players and teams will come from an external API and are read-only. A single
+interface with `save` and `deleteById` would force those repositories to
+implement writes they can only refuse by throwing — an LSP violation (callers
+can't trust the interface) and an ISP violation (implementers are forced to
+answer for methods they can't support). Where the data comes from (API or
+database) is not the reason for the split; hiding that is exactly what the
+interface is for.
+
+Other changes:
+
+- Signatures match Spring Data, so a JPA repository can implement
+  `WatchlistRepository` directly. `deleteById` now returns `void` and is a
+  no-op for a missing id; `WatchlistService.deleteEntry` checks `existsById`
+  first to keep answering 404.
+- `PlayerExistsValidator` depends on `PlayerRepository`; `PlayerLookup` was
+  deleted.
+- The in-memory player and team repositories look up by id or code in a map,
+  instead of scanning the whole list, and `findAll` keeps the original order.
+  `GET /players` and `GET /teams` were verified byte-for-byte identical before
+  and after the change.
+- The data-integrity tests moved with the data, from `PlayerServiceTest` and
+  `TeamServiceTest` into `InMemoryPlayerRepositoryTest` and
+  `InMemoryTeamRepositoryTest`. The service tests now mock their repository.
+  All 38 backend tests pass.

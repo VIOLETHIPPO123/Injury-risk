@@ -2,22 +2,22 @@ package com.sidelined.backend.validation;
 
 import com.sidelined.backend.exception.PlayerNotFoundException;
 import com.sidelined.backend.model.WatchlistEntry;
-import com.sidelined.backend.service.PlayerLookup;
+import com.sidelined.backend.repository.PlayerRepository;
 import org.springframework.stereotype.Component;
 
 // Rule: you can only watch a player that exists.
 @Component
 public class PlayerExistsValidator implements WatchlistEntryValidator {
 
-    private final PlayerLookup playerLookup;
+    private final PlayerRepository playerRepository;
 
-    public PlayerExistsValidator(PlayerLookup playerLookup) {
-        this.playerLookup = playerLookup;
+    public PlayerExistsValidator(PlayerRepository playerRepository) {
+        this.playerRepository = playerRepository;
     }
 
     @Override
     public void validate(WatchlistEntry request) {
-        if (!playerLookup.existsById(request.getPlayerId())) {
+        if (!playerRepository.existsById(request.getPlayerId())) {
             throw new PlayerNotFoundException(request.getPlayerId());
         }
     }

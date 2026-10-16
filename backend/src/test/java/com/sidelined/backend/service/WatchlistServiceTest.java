@@ -173,7 +173,7 @@ class WatchlistServiceTest {
     @Test
     void deleteEntry_existingEntry_removesItFromTheWatchlist() {
         // Arrange
-        when(watchlistRepository.deleteById(5L)).thenReturn(true);
+        when(watchlistRepository.existsById(5L)).thenReturn(true);
 
         // Act
         watchlistService.deleteEntry(5L);
@@ -185,10 +185,13 @@ class WatchlistServiceTest {
     @Test
     void deleteEntry_missingEntry_throwsNotFound() {
         // Arrange
-        when(watchlistRepository.deleteById(999L)).thenReturn(false);
+        when(watchlistRepository.existsById(999L)).thenReturn(false);
 
         // Act
         assertThrows(WatchlistEntryNotFoundException.class,
             () -> watchlistService.deleteEntry(999L));
+
+        // Assert
+        verify(watchlistRepository, never()).deleteById(any());
     }
 }

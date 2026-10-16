@@ -102,6 +102,14 @@ describe("homepage navigation", () => {
     },
   );
 
+  it("does not show the What is ACWR? link on the homepage", async () => {
+    await renderHome();
+
+    expect(
+      screen.queryByRole("button", { name: /what is acwr/i }),
+    ).not.toBeInTheDocument();
+  });
+
   it("reaches the ACWR info page from a link on the About page", async () => {
     const user = userEvent.setup();
     await renderHome();

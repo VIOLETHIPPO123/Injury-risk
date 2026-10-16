@@ -1,5 +1,6 @@
 package com.sidelined.backend.controller;
 
+import com.sidelined.backend.repository.InMemoryPlayerRepository;
 import com.sidelined.backend.repository.InMemoryWatchlistRepository;
 import com.sidelined.backend.service.WatchlistService;
 import com.sidelined.backend.validation.PlayerExistsValidator;
@@ -18,7 +19,7 @@ class WatchlistControllerErrorTest {
     private final MockMvc mvc = MockMvcBuilders
         .standaloneSetup(new WatchlistController(new WatchlistService(
             new InMemoryWatchlistRepository(),
-            List.of(new PlayerExistsValidator(id -> id == 1L)))))
+            List.of(new PlayerExistsValidator(new InMemoryPlayerRepository())))))
         .setControllerAdvice(new ApiExceptionHandler())
         .build();
 

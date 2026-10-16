@@ -29,9 +29,11 @@ Each class is tagged:
 | snapsLastGame | int | Most recent game's snap count |
 | snapsLast4Games | int | Total snaps over the last 4 games (used as the "chronic" workload) |
 
-Currently backed by a hardcoded in-memory list in `PlayerService`
-(`GET /players`), explicitly commented as illustrative placeholder data,
-not real game data.
+Read through the read-only `PlayerRepository` interface. Today's
+implementation, `InMemoryPlayerRepository`, is a hardcoded list served by
+`PlayerService` (`GET /players`), explicitly commented as illustrative
+placeholder data, not real game data. Planned: an external-API-backed
+implementation.
 
 ### Team — Implemented
 
@@ -42,7 +44,10 @@ not real game data.
 | code | String | e.g. `"ARI"` — the join key `Player.team` matches against |
 | name | String | e.g. `"Arizona Cardinals"` |
 
-Hardcoded list of all 32 NFL teams in `TeamService` (`GET /teams`).
+Read through the read-only `TeamRepository` interface, keyed by `code`.
+Today's implementation, `InMemoryTeamRepository`, is a hardcoded list of all
+32 NFL teams, served by `TeamService` (`GET /teams`). Planned: an
+external-API-backed implementation.
 
 ### WatchlistEntry — Implemented
 
@@ -130,7 +135,7 @@ eventually need to exist.
 | From | To | Multiplicity | Notes |
 |---|---|---|---|
 | Team | Player | 1 → * | By matching `Player.team` (string code) to `Team.code` — a soft/logical reference, not an enforced foreign key (no database yet) |
-| Player | WatchlistEntry | 1 → * | Via `WatchlistEntry.playerId`; validated against `PlayerService` on create, but not a real FK constraint |
+| Player | WatchlistEntry | 1 → * | Via `WatchlistEntry.playerId`; validated against `PlayerRepository` on create, but not a real FK constraint |
 | Division/Conference | Team | 1 → * | Static grouping only, defined in frontend data, not derivable from `Team` itself |
 | Player | WorkloadRatio | 1 → 1 (derived) | Computed per player per request from that player's two snap-count fields |
 | WorkloadRatio | RiskLevel | 1 → 1 (derived) | Pure function of the ratio value; no independent identity |
