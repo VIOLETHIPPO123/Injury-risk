@@ -1,21 +1,18 @@
 import { useState } from "react";
 import PlayerCard from "../components/PlayerCard";
 import RosterLink from "../components/RosterLink";
+import { createFormation } from "../utils/formation";
 import {
-  createFormation,
-  createDefenseFormation,
-  createSpecialTeamsFormation,
-} from "../utils/formation";
+  OFFENSE,
+  DEFENSE,
+  SPECIAL_TEAMS,
+} from "../utils/formationDefinitions";
 import "./TeamRosterPage.css";
 
 const UNITS = [
-  { id: "offense", label: "Offense", buildFormation: createFormation },
-  { id: "defense", label: "Defense", buildFormation: createDefenseFormation },
-  {
-    id: "special-teams",
-    label: "Special Teams",
-    buildFormation: createSpecialTeamsFormation,
-  },
+  { id: "offense", label: "Offense", formation: OFFENSE },
+  { id: "defense", label: "Defense", formation: DEFENSE },
+  { id: "special-teams", label: "Special Teams", formation: SPECIAL_TEAMS },
 ];
 
 function TeamRosterContent({
@@ -31,13 +28,13 @@ function TeamRosterContent({
 
   const teamPlayers = players.filter((p) => p.team === team);
   const active = UNITS.find((u) => u.id === selectedUnit) ?? UNITS[0];
-  const formation = active.buildFormation(teamPlayers);
+  const rows = createFormation(teamPlayers, active.formation);
 
-  const renderRow = (rowPlayers, className) =>
-    rowPlayers &&
-    rowPlayers.length > 0 && (
-      <div className={`formation-row ${className}`}>
-        {rowPlayers.map((player) => (
+  // Rows with no players aren't rendered (e.g. a unit missing a whole position group).
+  const renderRow = (row) =>
+    row.players.length > 0 && (
+      <div key={row.name} className={`formation-row ${row.name}`}>
+        {row.players.map((player) => (
           <PlayerCard
             key={player.id}
             {...player}
@@ -69,9 +66,7 @@ function TeamRosterContent({
       </div>
 
       <div className={`player-grid ${active.id}-formation`}>
-        {renderRow(formation.topRow, "top-row")}
-        {renderRow(formation.middleRow, "middle-row")}
-        {renderRow(formation.bottomRow, "bottom-row")}
+        {rows.map(renderRow)}
       </div>
     </section>
   );
