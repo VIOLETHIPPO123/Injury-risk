@@ -182,6 +182,16 @@
   margin-top: 20px;
 }
 
+/* The search page brings its own page padding; inside the panel it should sit flush. */
+.compare-panel-fallback .search-page {
+  padding: 0;
+}
+
+.compare-panel-fallback .search-page h1 {
+  font-size: 18px;
+  margin: 16px 0 8px;
+}
+
 .compare-panel-list .btn {
   align-self: flex-start;
   margin-top: 6px;
