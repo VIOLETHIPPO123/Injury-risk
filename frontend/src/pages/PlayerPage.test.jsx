@@ -204,3 +204,94 @@ describe("PlayerPage compare panel", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("PlayerPage compare panel with no watchlist candidates", () => {
+  const C = {
+    id: 30,
+    name: "Creed Humphrey",
+    team: "KC",
+    position: "C",
+    snapsLastGame: 66,
+    snapsLast4Games: 260,
+  };
+  const ALL_PLAYERS = [LG, RT, C, QB];
+
+  async function openEmptyPanel() {
+    const user = userEvent.setup();
+    render(
+      <PlayerPage
+        player={LG}
+        players={ALL_PLAYERS}
+        watchlistedPlayers={[QB]}
+        onBack={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Compare" }));
+    const panel = screen.getByRole("complementary", {
+      name: "Compare with watchlist",
+    });
+    return { user, panel };
+  }
+
+  function resultNames(panel) {
+    return within(panel)
+      .queryAllByRole("heading", { level: 2 })
+      .map((h) => h.textContent)
+      .filter((text) => !text.startsWith("Compare"));
+  }
+
+  it("shows a search locked to the player's position group, without the player", async () => {
+    const { user, panel } = await openEmptyPanel();
+    const searchBox = within(panel).getByRole("textbox", {
+      name: "Search players by name",
+    });
+
+    // Like the search page, it starts blank until there's a query.
+    expect(resultNames(panel)).toEqual([]);
+    expect(within(panel).getByText("Search a name or pick a team.")).toBeInTheDocument();
+
+    // "ja" also starts Lamar Jackson, but he's a QB, not OL.
+    await user.type(searchBox, "ja{Enter}");
+    expect(resultNames(panel)).toEqual(["Jawaan Taylor"]);
+
+    // "is" starts Isaac Seumalo, the player being compared.
+    await user.clear(searchBox);
+    await user.type(searchBox, "is{Enter}");
+    expect(resultNames(panel)).toEqual([]);
+  });
+
+  it("selects a search result for the side-by-side comparison", async () => {
+    const { user, panel } = await openEmptyPanel();
+
+    await user.type(
+      within(panel).getByRole("textbox", { name: "Search players by name" }),
+      "creed{Enter}",
+    );
+    await user.click(within(panel).getByRole("heading", { name: "Creed Humphrey" }));
+
+    const view = within(panel).getByRole("region", {
+      name: "Side-by-side comparison",
+    });
+    expect(
+      within(view).getByRole("columnheader", { name: "Creed Humphrey" }),
+    ).toBeInTheDocument();
+    expect(within(view).getByText(/^Safer start:/)).toBeInTheDocument();
+  });
+
+  it("doesn't show the search when there are watchlist candidates", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlayerPage
+        player={LG}
+        players={ALL_PLAYERS}
+        watchlistedPlayers={[RT]}
+        onBack={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Compare" }));
+
+    expect(
+      screen.queryByRole("textbox", { name: "Search players by name" }),
+    ).not.toBeInTheDocument();
+  });
+});

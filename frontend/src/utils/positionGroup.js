@@ -25,6 +25,15 @@ export function positionGroup(position) {
   return POSITION_GROUPS[position] ?? position;
 }
 
+// Every position in `group`, e.g. "OL" -> ["LT", "LG", "C", "RG", "RT"].
+// A group that isn't in the table is a single position, so it contains just itself.
+export function positionsInGroup(group) {
+  const positions = Object.keys(POSITION_GROUPS).filter(
+    (position) => POSITION_GROUPS[position] === group,
+  );
+  return positions.length > 0 ? positions : [group];
+}
+
 // Watchlisted players in the same position group as `player`, never `player` itself.
 export function compareCandidates(player, watchlistedPlayers) {
   const group = positionGroup(player.position);

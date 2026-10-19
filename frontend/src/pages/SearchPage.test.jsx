@@ -220,3 +220,22 @@ test("in locked mode, position selections from a shared search are ignored", () 
   expect(screen.getByText("Search a name or pick a team.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Reset" })).toBeDisabled();
 });
+
+// ---------- Choosing a result ----------
+
+test("with onSelectPlayer, clicking a result reports that player", async () => {
+  const user = userEvent.setup();
+  const onSelectPlayer = vi.fn();
+  renderPage({ onSelectPlayer });
+
+  await user.type(screen.getByRole("textbox", { name: "Search players by name" }), "cam{Enter}");
+  await user.click(screen.getByRole("heading", { name: "Cam Jurgens" }));
+
+  expect(onSelectPlayer).toHaveBeenCalledWith(PLAYERS[5]);
+});
+
+test("without onBack, there is no back link", () => {
+  render(<SearchPage players={PLAYERS} />);
+
+  expect(screen.queryByText("← Back to home")).not.toBeInTheDocument();
+});

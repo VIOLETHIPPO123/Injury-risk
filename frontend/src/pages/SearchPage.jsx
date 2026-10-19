@@ -8,7 +8,8 @@ import "./SearchPage.css";
 
 // `search`/`onSearchChange` let a parent own the query and chips so they survive leaving
 // the page; without them the page keeps its own state. `lockedPositions` restricts results
-// to those positions and hides the position chips.
+// to those positions and hides the position chips. `onSelectPlayer` makes each result
+// clickable; without `onBack` there is no back link (e.g. when embedded in a panel).
 function SearchPage({
   players = [],
   onBack,
@@ -17,6 +18,7 @@ function SearchPage({
   search,
   onSearchChange,
   lockedPositions,
+  onSelectPlayer,
 }) {
   const [localSearch, setLocalSearch] = useState(EMPTY_SEARCH);
   const current = search ?? localSearch;
@@ -50,7 +52,7 @@ function SearchPage({
 
   return (
     <section className="search-page">
-      <RosterLink onClick={onBack}>← Back to home</RosterLink>
+      {onBack && <RosterLink onClick={onBack}>← Back to home</RosterLink>}
       <h1>Search Players</h1>
 
       <SearchBar
@@ -94,6 +96,7 @@ function SearchPage({
               {...player}
               isWatchlisted={watchlistedIds.has(player.id)}
               onAddToWatchlist={onAddToWatchlist}
+              onClick={onSelectPlayer && (() => onSelectPlayer(player))}
             />
           ))}
         </div>
