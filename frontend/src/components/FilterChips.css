@@ -1,0 +1,33 @@
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 1rem 0 0;
+  padding: 0;
+  border: none;
+}
+
+.filter-chips legend {
+  width: 100%;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.filter-chip {
+  padding: 4px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.filter-chip.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}

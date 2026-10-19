@@ -14,6 +14,7 @@ import {
   updateWatchlistEntry,
   removeFromWatchlist,
 } from "./services/watchlistService";
+import { EMPTY_SEARCH } from "./utils/filterPlayers";
 import "./App.css";
 import Header from "./components/Header";
 
@@ -26,6 +27,8 @@ function App() {
   const [error, setError] = useState(null);
   const [watchlist, setWatchlist] = useState([]);
   const [watchlistError, setWatchlistError] = useState(null);
+  // Lives here, not in SearchPage, so the query and chips survive leaving the page.
+  const [search, setSearch] = useState(EMPTY_SEARCH);
 
   useEffect(() => {
     // StrictMode runs effects twice in dev — ignore the result of the discarded run.
@@ -130,6 +133,8 @@ function App() {
     content = (
       <SearchPage
         players={players}
+        search={search}
+        onSearchChange={setSearch}
         onBack={() => setView("home")}
         watchlistedIds={watchlistedIds}
         onAddToWatchlist={handleAddToWatchlist}
