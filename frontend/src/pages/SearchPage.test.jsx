@@ -33,7 +33,13 @@ function chip(group, label) {
 }
 
 function typeQuery(user, text) {
-  return user.type(screen.getByRole("textbox", { name: "Search players by name" }), text);
+  return user.type(screen.getByRole("combobox", { name: "Search players by name" }), text);
+}
+
+// Types the query and presses Enter, which is what fills the results grid.
+async function searchFor(user, text) {
+  await typeQuery(user, text);
+  await user.keyboard("{Enter}");
 }
 
 // ---------- Blank default and query length ----------
@@ -56,11 +62,11 @@ test("a 1-character query shows no results and keeps the prompt", async () => {
   expect(screen.getByText("Search a name or pick a position/team.")).toBeInTheDocument();
 });
 
-test("a 2-character query shows matching players, last-name matches first", async () => {
+test("a 2-character query shows matching players after Enter, last-name matches first", async () => {
   const user = userEvent.setup();
   renderPage();
 
-  await typeQuery(user, "la");
+  await searchFor(user, "la");
 
   // Lamb matches on his last name, so he ranks above Landon Dickerson, who matches on his first.
   expect(shownNames()).toEqual(["CeeDee Lamb", "Landon Dickerson"]);
@@ -71,10 +77,95 @@ test("a query with no matches says No players found", async () => {
   const user = userEvent.setup();
   renderPage();
 
-  await typeQuery(user, "zz");
+  await searchFor(user, "zz");
 
   expect(shownNames()).toEqual([]);
   expect(screen.getByText("No players found")).toBeInTheDocument();
+});
+
+test("typing shows suggestions but no player cards until Enter is pressed", async () => {
+  const user = userEvent.setup();
+  renderPage();
+
+  await typeQuery(user, "CeeDee Lamb");
+
+  expect(screen.getByRole("option", { name: /CeeDee Lamb/ })).toBeInTheDocument();
+  expect(shownNames()).toEqual([]);
+  expect(screen.getByText("Search a name or pick a position/team.")).toBeInTheDocument();
+
+  await user.keyboard("{Enter}");
+  expect(shownNames()).toEqual(["CeeDee Lamb"]);
+});
+
+test("editing a submitted query keeps the previous results until Enter is pressed again", async () => {
+  const user = userEvent.setup();
+  renderPage();
+
+  await searchFor(user, "lamb");
+  await user.clear(screen.getByRole("combobox", { name: "Search players by name" }));
+  await typeQuery(user, "brown");
+  expect(shownNames()).toEqual(["CeeDee Lamb"]);
+
+  await user.keyboard("{Enter}");
+  expect(shownNames()).toEqual(["A.J. Brown"]);
+});
+
+// ---------- Suggestions and opening players ----------
+
+test("suggestions show at most 6 players, in the same order as the results", async () => {
+  const user = userEvent.setup();
+  const many = Array.from({ length: 8 }, (_, i) => player(100 + i, `Sam Player${i}`, "DAL", "WR"));
+  renderPage({ players: many });
+
+  await typeQuery(user, "sam");
+  expect(screen.getAllByRole("option")).toHaveLength(6);
+
+  await user.keyboard("{Enter}");
+  expect(shownNames()).toHaveLength(8);
+});
+
+test("filters alone don't open the suggestions", async () => {
+  const user = userEvent.setup();
+  renderPage();
+
+  await user.click(chip("Team", "PHI"));
+
+  expect(screen.queryAllByRole("option")).toHaveLength(0);
+});
+
+test("choosing a suggestion with the keyboard opens that player", async () => {
+  const user = userEvent.setup();
+  const onPlayerClick = vi.fn();
+  renderPage({ onPlayerClick });
+
+  await typeQuery(user, "la");
+  await user.keyboard("{ArrowDown}{ArrowDown}{Enter}");
+
+  expect(onPlayerClick).toHaveBeenCalledWith(PLAYERS[6]);
+});
+
+test("Enter with nothing highlighted closes the suggestions and leaves the matches in the grid", async () => {
+  const user = userEvent.setup();
+  const onPlayerClick = vi.fn();
+  renderPage({ onPlayerClick });
+
+  await typeQuery(user, "la");
+  await user.keyboard("{Enter}");
+
+  expect(screen.queryAllByRole("option")).toHaveLength(0);
+  expect(shownNames()).toEqual(["CeeDee Lamb", "Landon Dickerson"]);
+  expect(onPlayerClick).not.toHaveBeenCalled();
+});
+
+test("clicking a result card opens that player", async () => {
+  const user = userEvent.setup();
+  const onPlayerClick = vi.fn();
+  renderPage({ onPlayerClick });
+
+  await user.click(chip("Team", "PHI"));
+  await user.click(screen.getByRole("heading", { name: "Saquon Barkley" }));
+
+  expect(onPlayerClick).toHaveBeenCalledWith(PLAYERS[4]);
 });
 
 // ---------- Filter combinations ----------
@@ -112,7 +203,7 @@ test("chips combine with the name query", async () => {
   const user = userEvent.setup();
   renderPage();
 
-  await user.type(screen.getByRole("textbox", { name: "Search players by name" }), "brown");
+  await searchFor(user, "brown");
   await user.click(chip("Position", "WR"));
 
   expect(shownNames()).toEqual(["A.J. Brown"]);
@@ -147,7 +238,7 @@ test("clicking a selected chip clears just that chip and updates the results", a
 test("Reset clears the query and every chip and returns to the prompt", async () => {
   const user = userEvent.setup();
   renderPage();
-  const searchBox = screen.getByRole("textbox", { name: "Search players by name" });
+  const searchBox = screen.getByRole("combobox", { name: "Search players by name" });
 
   await user.type(searchBox, "lamb");
   await user.click(chip("Position", "WR"));
@@ -175,14 +266,19 @@ test("Reset is disabled until something is selected", async () => {
 test("when a parent owns the search, the page shows it and reports every change", async () => {
   const user = userEvent.setup();
   const onSearchChange = vi.fn();
-  renderPage({ search: { query: "dak", positions: ["QB"], teams: [] }, onSearchChange });
+  renderPage({ search: { input: "dak", query: "dak", positions: ["QB"], teams: [] }, onSearchChange });
 
-  expect(screen.getByRole("textbox", { name: "Search players by name" })).toHaveValue("dak");
+  expect(screen.getByRole("combobox", { name: "Search players by name" })).toHaveValue("dak");
   expect(chip("Position", "QB")).toHaveAttribute("aria-pressed", "true");
   expect(shownNames()).toEqual(["Dak Prescott"]);
 
   await user.click(chip("Team", "DAL"));
-  expect(onSearchChange).toHaveBeenLastCalledWith({ query: "dak", positions: ["QB"], teams: ["DAL"] });
+  expect(onSearchChange).toHaveBeenLastCalledWith({
+    input: "dak",
+    query: "dak",
+    positions: ["QB"],
+    teams: ["DAL"],
+  });
 
   await user.click(screen.getByRole("button", { name: "Reset" }));
   expect(onSearchChange).toHaveBeenLastCalledWith(EMPTY_SEARCH);
@@ -205,14 +301,14 @@ test("in locked mode, team chips and the query only return the locked positions"
   await user.click(chip("Team", "PHI"));
   expect(shownNames()).toEqual(["Cam Jurgens", "Landon Dickerson"]);
 
-  await typeQuery(user, "cam");
+  await searchFor(user, "cam");
   expect(shownNames()).toEqual(["Cam Jurgens"]);
 });
 
 test("in locked mode, position selections from a shared search are ignored", () => {
   renderPage({
     lockedPositions: OFFENSIVE_LINE,
-    search: { query: "", positions: ["WR"], teams: [] },
+    search: { ...EMPTY_SEARCH, positions: ["WR"] },
     onSearchChange: () => {},
   });
 

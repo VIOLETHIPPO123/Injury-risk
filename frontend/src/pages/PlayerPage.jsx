@@ -103,13 +103,19 @@ function ComparePanel({ player, watchlistedPlayers, onClose }) {
   );
 }
 
-function PlayerPage({ player, watchlistedPlayers = [], onBack }) {
+// backLabel names wherever onBack returns to (the search page or the team roster).
+function PlayerPage({
+  player,
+  watchlistedPlayers = [],
+  onBack,
+  backLabel = "Back to team page",
+}) {
   const [compareOpen, setCompareOpen] = useState(false);
 
   if (!player) {
     return (
       <section className="player-page">
-        <RosterLink onClick={onBack}>Back to team page</RosterLink>
+        <RosterLink onClick={onBack}>{backLabel}</RosterLink>
         <h1>No player found.</h1>
       </section>
     );
@@ -122,7 +128,7 @@ function PlayerPage({ player, watchlistedPlayers = [], onBack }) {
 
   return (
     <section className={`player-page risk-${risk.tier}`}>
-      <RosterLink onClick={onBack}>Back to team page</RosterLink>
+      <RosterLink onClick={onBack}>{backLabel}</RosterLink>
 
       <header className="player-page-header">
         <h1>{name}</h1>

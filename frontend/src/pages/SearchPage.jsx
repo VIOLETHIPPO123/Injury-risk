@@ -3,12 +3,15 @@ import SearchBar from "../components/SearchBar";
 import FilterChips from "../components/FilterChips";
 import PlayerCard from "../components/PlayerCard";
 import RosterLink from "../components/RosterLink";
-import { EMPTY_SEARCH, filterPlayers, hasActiveSearch } from "../utils/filterPlayers";
+import { EMPTY_SEARCH, filterPlayers, hasActiveQuery, hasActiveSearch } from "../utils/filterPlayers";
 import "./SearchPage.css";
+
+const MAX_SUGGESTIONS = 6;
 
 // `search`/`onSearchChange` let a parent own the query and chips so they survive leaving
 // the page; without them the page keeps its own state. `lockedPositions` restricts results
-// to those positions and hides the position chips.
+// to those positions and hides the position chips. Picking a suggestion or a result card
+// calls onPlayerClick.
 function SearchPage({
   players = [],
   onBack,
@@ -17,6 +20,7 @@ function SearchPage({
   search,
   onSearchChange,
   lockedPositions,
+  onPlayerClick,
 }) {
   const [localSearch, setLocalSearch] = useState(EMPTY_SEARCH);
   const current = search ?? localSearch;
@@ -41,9 +45,14 @@ function SearchPage({
   const effectiveSearch = { ...current, positions };
   const filteredPlayers = filterPlayers(pool, effectiveSearch);
 
-  // Until there's a query of 2+ characters or a chip, show a prompt instead of results.
+  // Until a query of 2+ characters is submitted or a chip is picked, show a prompt instead of results.
   const searching = hasActiveSearch(effectiveSearch);
-  const isActive = current.query !== "" || positions.length > 0 || current.teams.length > 0;
+  // Suggestions follow what's typed; the results grid waits for Enter.
+  const suggestions = hasActiveQuery(current.input)
+    ? filterPlayers(pool, { ...effectiveSearch, query: current.input }).slice(0, MAX_SUGGESTIONS)
+    : [];
+  const isActive =
+    current.input !== "" || current.query !== "" || positions.length > 0 || current.teams.length > 0;
   const prompt = lockedPositions
     ? "Search a name or pick a team."
     : "Search a name or pick a position/team.";
@@ -54,8 +63,11 @@ function SearchPage({
       <h1>Search Players</h1>
 
       <SearchBar
-        value={current.query}
-        onSearch={(query) => update({ query })}
+        value={current.input}
+        onSearch={(input) => update({ input })}
+        onSubmit={(query) => update({ query })}
+        suggestions={suggestions}
+        onSelect={onPlayerClick}
       />
 
       {!lockedPositions && (
@@ -92,6 +104,7 @@ function SearchPage({
             <PlayerCard
               key={player.id}
               {...player}
+              onClick={() => onPlayerClick?.(player)}
               isWatchlisted={watchlistedIds.has(player.id)}
               onAddToWatchlist={onAddToWatchlist}
             />

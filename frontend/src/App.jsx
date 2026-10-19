@@ -23,6 +23,8 @@ function App() {
   const [players, setPlayers] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState(null);
+  // The view PlayerPage's back button returns to: "search" or "team-roster".
+  const [playerOrigin, setPlayerOrigin] = useState("team-roster");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [watchlist, setWatchlist] = useState([]);
@@ -66,6 +68,12 @@ function App() {
       ignore = true;
     };
   }, []);
+
+  function openPlayer(player, origin) {
+    setSelectedPlayer(player);
+    setPlayerOrigin(origin);
+    setView("player");
+  }
 
   const watchlistedIds = new Set(watchlist.map((entry) => entry.playerId));
   const watchlistedPlayers = players.filter((p) => watchlistedIds.has(p.id));
@@ -121,10 +129,7 @@ function App() {
         team={selectedTeam}
         players={players}
         onBack={() => setView("rosters")}
-        onPlayerClick={(player) => {
-          setSelectedPlayer(player);
-          setView("player");
-        }}
+        onPlayerClick={(player) => openPlayer(player, "team-roster")}
         watchlistedIds={watchlistedIds}
         onAddToWatchlist={handleAddToWatchlist}
       />
@@ -135,6 +140,7 @@ function App() {
         players={players}
         search={search}
         onSearchChange={setSearch}
+        onPlayerClick={(player) => openPlayer(player, "search")}
         onBack={() => setView("home")}
         watchlistedIds={watchlistedIds}
         onAddToWatchlist={handleAddToWatchlist}
@@ -155,7 +161,8 @@ function App() {
       <PlayerPage
         player={selectedPlayer}
         watchlistedPlayers={watchlistedPlayers}
-        onBack={() => setView("team-roster")}
+        onBack={() => setView(playerOrigin)}
+        backLabel={playerOrigin === "search" ? "Back to search" : "Back to team page"}
       />
     );
   } else if (view === "about") {

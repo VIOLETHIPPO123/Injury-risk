@@ -10,3 +10,40 @@
 .search-bar:focus {
   border-color: #666;
 }
+
+.search-combobox {
+  position: relative;
+}
+
+.search-suggestions {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 10;
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+
+.search-suggestions li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+}
+
+.search-suggestions li.highlighted {
+  background: var(--accent-bg);
+}
+
+.search-suggestion-meta {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: #666;
+}

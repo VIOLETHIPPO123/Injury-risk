@@ -83,8 +83,10 @@ export function filterPlayersByName(players, query) {
     .map(({ player }) => player);
 }
 
-// The search page's state: a name query plus the selected position and team chips.
-export const EMPTY_SEARCH = { query: "", positions: [], teams: [] };
+// The search page's state: the text in the search box (`input`, which drives the
+// suggestions), the query last submitted with Enter (`query`, which drives the results),
+// and the selected position and team chips.
+export const EMPTY_SEARCH = { input: "", query: "", positions: [], teams: [] };
 
 // A category with nothing selected doesn't filter.
 function matchesAny(selected, value) {
