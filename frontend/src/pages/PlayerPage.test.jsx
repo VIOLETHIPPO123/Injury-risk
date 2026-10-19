@@ -204,3 +204,79 @@ describe("PlayerPage compare panel", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("PlayerPage compare panel with no watchlist candidates", () => {
+  const C = {
+    id: 30,
+    name: "Creed Humphrey",
+    team: "KC",
+    position: "C",
+    snapsLastGame: 66,
+    snapsLast4Games: 260,
+  };
+  const ALL_PLAYERS = [LG, RT, C, QB];
+
+  async function openEmptyPanel() {
+    const user = userEvent.setup();
+    render(
+      <PlayerPage
+        player={LG}
+        players={ALL_PLAYERS}
+        watchlistedPlayers={[QB]}
+        onBack={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Compare" }));
+    const panel = screen.getByRole("complementary", {
+      name: "Compare with watchlist",
+    });
+    return { user, panel };
+  }
+
+  function resultNames(panel) {
+    return within(panel)
+      .queryAllByRole("heading", { level: 2 })
+      .map((h) => h.textContent)
+      .filter((text) => !text.startsWith("Compare"));
+  }
+
+  it("shows a search locked to the player's position group, without the player", async () => {
+    const { panel } = await openEmptyPanel();
+
+    expect(
+      within(panel).getByRole("textbox", { name: "Search players by name" }),
+    ).toBeInTheDocument();
+    expect(resultNames(panel)).toEqual(["Jawaan Taylor", "Creed Humphrey"]);
+  });
+
+  it("selects a search result for the side-by-side comparison", async () => {
+    const { user, panel } = await openEmptyPanel();
+
+    await user.click(within(panel).getByRole("heading", { name: "Creed Humphrey" }));
+
+    const view = within(panel).getByRole("region", {
+      name: "Side-by-side comparison",
+    });
+    expect(
+      within(view).getByRole("columnheader", { name: "Creed Humphrey" }),
+    ).toBeInTheDocument();
+    expect(within(view).getByText(/^Safer start:/)).toBeInTheDocument();
+  });
+
+  it("doesn't show the search when there are watchlist candidates", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlayerPage
+        player={LG}
+        players={ALL_PLAYERS}
+        watchlistedPlayers={[RT]}
+        onBack={vi.fn()}
+      />,
+    );
+    await user.click(screen.getByRole("button", { name: "Compare" }));
+
+    expect(
+      screen.queryByRole("textbox", { name: "Search players by name" }),
+    ).not.toBeInTheDocument();
+  });
+});

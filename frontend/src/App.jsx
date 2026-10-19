@@ -154,6 +154,7 @@ function App() {
     content = (
       <PlayerPage
         player={selectedPlayer}
+        players={players}
         watchlistedPlayers={watchlistedPlayers}
         onBack={() => setView("team-roster")}
       />
