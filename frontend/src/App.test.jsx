@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import App from "./App";
@@ -203,5 +203,54 @@ describe("watchlist updates without a page refresh", () => {
 
     // Assert
     expect(screen.getByText("Add to Watchlist")).toBeEnabled();
+  });
+});
+
+describe("search persistence", () => {
+  const SEARCH_PLAYERS = [
+    { id: 1, name: "CeeDee Lamb", team: "DAL", position: "WR", snapsLastGame: 60, snapsLast4Games: 230 },
+    { id: 2, name: "Dak Prescott", team: "DAL", position: "QB", snapsLastGame: 68, snapsLast4Games: 253 },
+    { id: 3, name: "A.J. Brown", team: "PHI", position: "WR", snapsLastGame: 58, snapsLast4Games: 220 },
+  ];
+
+  async function openSearchPage(user) {
+    await user.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
+    await user.click(screen.getByRole("menuitem", { name: "Search" }));
+  }
+
+  function chip(group, label) {
+    return within(screen.getByRole("group", { name: group })).getByRole("button", { name: label });
+  }
+
+  it("keeps the query and filters after leaving search and coming back", async () => {
+    const user = userEvent.setup();
+    await renderHome(SEARCH_PLAYERS);
+
+    await openSearchPage(user);
+    await user.type(screen.getByRole("textbox", { name: "Search players by name" }), "l");
+    await user.click(chip("Position", "WR"));
+    await user.click(chip("Team", "DAL"));
+    await user.click(screen.getByText("← Back to home"));
+    await openSearchPage(user);
+
+    expect(screen.getByRole("textbox", { name: "Search players by name" })).toHaveValue("l");
+    expect(chip("Position", "WR")).toHaveAttribute("aria-pressed", "true");
+    expect(chip("Team", "DAL")).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByText("CeeDee Lamb")).toBeInTheDocument();
+    expect(screen.queryByText("A.J. Brown")).not.toBeInTheDocument();
+  });
+
+  it("starts empty again after Reset, even after leaving and coming back", async () => {
+    const user = userEvent.setup();
+    await renderHome(SEARCH_PLAYERS);
+
+    await openSearchPage(user);
+    await user.click(chip("Team", "PHI"));
+    await user.click(screen.getByRole("button", { name: "Reset" }));
+    await user.click(screen.getByText("← Back to home"));
+    await openSearchPage(user);
+
+    expect(chip("Team", "PHI")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(SEARCH_PLAYERS.length);
   });
 });

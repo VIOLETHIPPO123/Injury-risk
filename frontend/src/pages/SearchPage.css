@@ -4,6 +4,21 @@
   padding: 2rem 1rem;
 }
 
+.search-reset {
+  margin-top: 1rem;
+  padding: 6px 16px;
+  border: 1px solid currentColor;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.search-reset:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
 .no-results {
   margin-top: 2rem;
   color: #666;
