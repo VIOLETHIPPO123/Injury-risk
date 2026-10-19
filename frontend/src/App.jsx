@@ -140,7 +140,7 @@ function App() {
         players={players}
         search={search}
         onSearchChange={setSearch}
-        onPlayerClick={(player) => openPlayer(player, "search")}
+        onSelectPlayer={(player) => openPlayer(player, "search")}
         onBack={() => setView("home")}
         watchlistedIds={watchlistedIds}
         onAddToWatchlist={handleAddToWatchlist}
@@ -160,6 +160,7 @@ function App() {
     content = (
       <PlayerPage
         player={selectedPlayer}
+        players={players}
         watchlistedPlayers={watchlistedPlayers}
         onBack={() => setView(playerOrigin)}
         backLabel={playerOrigin === "search" ? "Back to search" : "Back to team page"}

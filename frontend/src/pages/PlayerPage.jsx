@@ -3,7 +3,12 @@ import Button from "../components/Button";
 import RosterLink from "../components/RosterLink";
 import { calculateAcwr, riskLevel } from "../utils/acwr";
 import { compareVerdict, comparisonRows } from "../utils/comparison";
-import { compareCandidates, positionGroup } from "../utils/positionGroup";
+import {
+  compareCandidates,
+  positionGroup,
+  positionsInGroup,
+} from "../utils/positionGroup";
+import SearchPage from "./SearchPage";
 import "./PlayerPage.css";
 
 function SideBySide({ player, other, onClear }) {
@@ -44,12 +49,12 @@ function SideBySide({ player, other, onClear }) {
   );
 }
 
-function ComparePanel({ player, watchlistedPlayers, onClose }) {
-  const [comparedId, setComparedId] = useState(null);
+function ComparePanel({ player, players, watchlistedPlayers, onClose }) {
+  // The chosen player, from the watchlist list or the fallback search.
+  const [compared, setCompared] = useState(null);
+  const comparedId = compared?.id;
   const group = positionGroup(player.position);
   const candidates = compareCandidates(player, watchlistedPlayers);
-  // Looked up each render, so a player taken off the watchlist drops out of the comparison.
-  const compared = candidates.find((other) => other.id === comparedId);
 
   return (
     <aside className="compare-panel" aria-label="Compare with watchlist">
@@ -62,7 +67,7 @@ function ComparePanel({ player, watchlistedPlayers, onClose }) {
         <SideBySide
           player={player}
           other={compared}
-          onClear={() => setComparedId(null)}
+          onClear={() => setCompared(null)}
         />
       )}
 
@@ -86,7 +91,7 @@ function ComparePanel({ player, watchlistedPlayers, onClose }) {
                 <Button
                   aria-label={`Compare with ${other.name}`}
                   disabled={other.id === comparedId}
-                  onClick={() => setComparedId(other.id)}
+                  onClick={() => setCompared(other)}
                 >
                   {other.id === comparedId ? "Comparing" : "Compare"}
                 </Button>
@@ -95,9 +100,17 @@ function ComparePanel({ player, watchlistedPlayers, onClose }) {
           })}
         </ul>
       ) : (
-        <p className="compare-panel-empty">
-          No other {group} players on your watchlist.
-        </p>
+        <div className="compare-panel-fallback">
+          <p className="compare-panel-empty">
+            No other {group} players on your watchlist.
+          </p>
+          <p>Search for a {group} player to compare against instead.</p>
+          <SearchPage
+            players={players.filter((other) => other.id !== player.id)}
+            lockedPositions={positionsInGroup(group)}
+            onSelectPlayer={setCompared}
+          />
+        </div>
       )}
     </aside>
   );
@@ -106,6 +119,7 @@ function ComparePanel({ player, watchlistedPlayers, onClose }) {
 // backLabel names wherever onBack returns to (the search page or the team roster).
 function PlayerPage({
   player,
+  players = [],
   watchlistedPlayers = [],
   onBack,
   backLabel = "Back to team page",
@@ -149,6 +163,7 @@ function PlayerPage({
       {compareOpen && (
         <ComparePanel
           player={player}
+          players={players}
           watchlistedPlayers={watchlistedPlayers}
           onClose={() => setCompareOpen(false)}
         />

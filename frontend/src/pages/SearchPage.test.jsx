@@ -135,37 +135,37 @@ test("filters alone don't open the suggestions", async () => {
 
 test("choosing a suggestion with the keyboard opens that player", async () => {
   const user = userEvent.setup();
-  const onPlayerClick = vi.fn();
-  renderPage({ onPlayerClick });
+  const onSelectPlayer = vi.fn();
+  renderPage({ onSelectPlayer });
 
   await typeQuery(user, "la");
   await user.keyboard("{ArrowDown}{ArrowDown}{Enter}");
 
-  expect(onPlayerClick).toHaveBeenCalledWith(PLAYERS[6]);
+  expect(onSelectPlayer).toHaveBeenCalledWith(PLAYERS[6]);
 });
 
 test("Enter with nothing highlighted closes the suggestions and leaves the matches in the grid", async () => {
   const user = userEvent.setup();
-  const onPlayerClick = vi.fn();
-  renderPage({ onPlayerClick });
+  const onSelectPlayer = vi.fn();
+  renderPage({ onSelectPlayer });
 
   await typeQuery(user, "la");
   await user.keyboard("{Enter}");
 
   expect(screen.queryAllByRole("option")).toHaveLength(0);
   expect(shownNames()).toEqual(["CeeDee Lamb", "Landon Dickerson"]);
-  expect(onPlayerClick).not.toHaveBeenCalled();
+  expect(onSelectPlayer).not.toHaveBeenCalled();
 });
 
 test("clicking a result card opens that player", async () => {
   const user = userEvent.setup();
-  const onPlayerClick = vi.fn();
-  renderPage({ onPlayerClick });
+  const onSelectPlayer = vi.fn();
+  renderPage({ onSelectPlayer });
 
   await user.click(chip("Team", "PHI"));
   await user.click(screen.getByRole("heading", { name: "Saquon Barkley" }));
 
-  expect(onPlayerClick).toHaveBeenCalledWith(PLAYERS[4]);
+  expect(onSelectPlayer).toHaveBeenCalledWith(PLAYERS[4]);
 });
 
 // ---------- Filter combinations ----------
@@ -315,4 +315,23 @@ test("in locked mode, position selections from a shared search are ignored", () 
   expect(shownNames()).toEqual([]);
   expect(screen.getByText("Search a name or pick a team.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Reset" })).toBeDisabled();
+});
+
+// ---------- Choosing a result ----------
+
+test("with onSelectPlayer, clicking a result reports that player", async () => {
+  const user = userEvent.setup();
+  const onSelectPlayer = vi.fn();
+  renderPage({ onSelectPlayer });
+
+  await user.type(screen.getByRole("combobox", { name: "Search players by name" }), "cam{Enter}");
+  await user.click(screen.getByRole("heading", { name: "Cam Jurgens" }));
+
+  expect(onSelectPlayer).toHaveBeenCalledWith(PLAYERS[5]);
+});
+
+test("without onBack, there is no back link", () => {
+  render(<SearchPage players={PLAYERS} />);
+
+  expect(screen.queryByText("← Back to home")).not.toBeInTheDocument();
 });

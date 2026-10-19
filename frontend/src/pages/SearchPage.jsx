@@ -11,7 +11,7 @@ const MAX_SUGGESTIONS = 6;
 // `search`/`onSearchChange` let a parent own the query and chips so they survive leaving
 // the page; without them the page keeps its own state. `lockedPositions` restricts results
 // to those positions and hides the position chips. Picking a suggestion or a result card
-// calls onPlayerClick.
+// calls `onSelectPlayer`; without `onBack` there is no back link (e.g. when embedded in a panel).
 function SearchPage({
   players = [],
   onBack,
@@ -20,7 +20,7 @@ function SearchPage({
   search,
   onSearchChange,
   lockedPositions,
-  onPlayerClick,
+  onSelectPlayer,
 }) {
   const [localSearch, setLocalSearch] = useState(EMPTY_SEARCH);
   const current = search ?? localSearch;
@@ -59,7 +59,7 @@ function SearchPage({
 
   return (
     <section className="search-page">
-      <RosterLink onClick={onBack}>← Back to home</RosterLink>
+      {onBack && <RosterLink onClick={onBack}>← Back to home</RosterLink>}
       <h1>Search Players</h1>
 
       <SearchBar
@@ -67,7 +67,7 @@ function SearchPage({
         onSearch={(input) => update({ input })}
         onSubmit={(query) => update({ query })}
         suggestions={suggestions}
-        onSelect={onPlayerClick}
+        onSelect={onSelectPlayer}
       />
 
       {!lockedPositions && (
@@ -104,9 +104,9 @@ function SearchPage({
             <PlayerCard
               key={player.id}
               {...player}
-              onClick={() => onPlayerClick?.(player)}
               isWatchlisted={watchlistedIds.has(player.id)}
               onAddToWatchlist={onAddToWatchlist}
+              onClick={onSelectPlayer && (() => onSelectPlayer(player))}
             />
           ))}
         </div>
