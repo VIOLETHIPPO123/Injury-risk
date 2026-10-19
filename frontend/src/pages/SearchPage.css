@@ -19,6 +19,7 @@
   cursor: default;
 }
 
+.search-prompt,
 .no-results {
   margin-top: 2rem;
   color: #666;

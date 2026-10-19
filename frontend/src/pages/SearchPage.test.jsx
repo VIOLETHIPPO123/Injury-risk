@@ -32,6 +32,51 @@ function chip(group, label) {
   return within(screen.getByRole("group", { name: group })).getByRole("button", { name: label });
 }
 
+function typeQuery(user, text) {
+  return user.type(screen.getByRole("textbox", { name: "Search players by name" }), text);
+}
+
+// ---------- Blank default and query length ----------
+
+test("the page opens with no player cards and a prompt", () => {
+  renderPage();
+
+  expect(shownNames()).toEqual([]);
+  expect(screen.getByText("Search a name or pick a position/team.")).toBeInTheDocument();
+  expect(screen.queryByText("No players found")).not.toBeInTheDocument();
+});
+
+test("a 1-character query shows no results and keeps the prompt", async () => {
+  const user = userEvent.setup();
+  renderPage();
+
+  await typeQuery(user, "c");
+
+  expect(shownNames()).toEqual([]);
+  expect(screen.getByText("Search a name or pick a position/team.")).toBeInTheDocument();
+});
+
+test("a 2-character query shows matching players, last-name matches first", async () => {
+  const user = userEvent.setup();
+  renderPage();
+
+  await typeQuery(user, "la");
+
+  // Lamb matches on his last name, so he ranks above Landon Dickerson, who matches on his first.
+  expect(shownNames()).toEqual(["CeeDee Lamb", "Landon Dickerson"]);
+  expect(screen.queryByText("Search a name or pick a position/team.")).not.toBeInTheDocument();
+});
+
+test("a query with no matches says No players found", async () => {
+  const user = userEvent.setup();
+  renderPage();
+
+  await typeQuery(user, "zz");
+
+  expect(shownNames()).toEqual([]);
+  expect(screen.getByText("No players found")).toBeInTheDocument();
+});
+
 // ---------- Filter combinations ----------
 
 test("selecting only filters, with no query, shows results", async () => {
@@ -81,7 +126,7 @@ test("a combination with no matches says so", async () => {
   await user.click(chip("Team", "DAL"));
 
   expect(shownNames()).toEqual([]);
-  expect(screen.getByText("No players match the selected filters.")).toBeInTheDocument();
+  expect(screen.getByText("No players found")).toBeInTheDocument();
 });
 
 // ---------- Clearing and Reset ----------
@@ -99,7 +144,7 @@ test("clicking a selected chip clears just that chip and updates the results", a
   expect(shownNames()).toEqual(["CeeDee Lamb", "A.J. Brown"]);
 });
 
-test("Reset clears the query and every chip and shows all players again", async () => {
+test("Reset clears the query and every chip and returns to the prompt", async () => {
   const user = userEvent.setup();
   renderPage();
   const searchBox = screen.getByRole("textbox", { name: "Search players by name" });
@@ -112,7 +157,8 @@ test("Reset clears the query and every chip and shows all players again", async 
   expect(searchBox).toHaveValue("");
   expect(chip("Position", "WR")).toHaveAttribute("aria-pressed", "false");
   expect(chip("Team", "DAL")).toHaveAttribute("aria-pressed", "false");
-  expect(shownNames()).toHaveLength(PLAYERS.length);
+  expect(shownNames()).toEqual([]);
+  expect(screen.getByText("Search a name or pick a position/team.")).toBeInTheDocument();
 });
 
 test("Reset is disabled until something is selected", async () => {
@@ -144,21 +190,22 @@ test("when a parent owns the search, the page shows it and reports every change"
 
 // ---------- Locked positions ----------
 
-test("with lockedPositions, only those positions appear and the position chips are hidden", () => {
+test("with lockedPositions, the position chips are hidden and the page opens on a team prompt", () => {
   renderPage({ lockedPositions: OFFENSIVE_LINE });
 
   expect(screen.queryByRole("group", { name: "Position" })).not.toBeInTheDocument();
-  expect(shownNames()).toEqual(["Tyler Guyton", "Cam Jurgens", "Landon Dickerson"]);
+  expect(shownNames()).toEqual([]);
+  expect(screen.getByText("Search a name or pick a team.")).toBeInTheDocument();
 });
 
-test("in locked mode, team chips and the query still narrow the locked positions", async () => {
+test("in locked mode, team chips and the query only return the locked positions", async () => {
   const user = userEvent.setup();
   renderPage({ lockedPositions: OFFENSIVE_LINE });
 
   await user.click(chip("Team", "PHI"));
   expect(shownNames()).toEqual(["Cam Jurgens", "Landon Dickerson"]);
 
-  await user.type(screen.getByRole("textbox", { name: "Search players by name" }), "cam");
+  await typeQuery(user, "cam");
   expect(shownNames()).toEqual(["Cam Jurgens"]);
 });
 
@@ -169,6 +216,7 @@ test("in locked mode, position selections from a shared search are ignored", () 
     onSearchChange: () => {},
   });
 
-  expect(shownNames()).toEqual(["Tyler Guyton", "Cam Jurgens", "Landon Dickerson"]);
+  expect(shownNames()).toEqual([]);
+  expect(screen.getByText("Search a name or pick a team.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Reset" })).toBeDisabled();
 });

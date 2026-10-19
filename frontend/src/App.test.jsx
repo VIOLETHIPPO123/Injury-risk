@@ -131,6 +131,9 @@ test("Add to Watchlist submits the expected payload and the player shows up on t
   await renderHome(PLAYERS);
   fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Search" }));
+  fireEvent.change(screen.getByRole("textbox", { name: "Search players by name" }), {
+    target: { value: "brissett" },
+  });
 
   // Act
   fireEvent.click(screen.getByText("Add to Watchlist"));
@@ -200,6 +203,9 @@ describe("watchlist updates without a page refresh", () => {
     fireEvent.click(screen.getByText("← Back to home"));
     fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Search" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Search players by name" }), {
+      target: { value: "brissett" },
+    });
 
     // Assert
     expect(screen.getByText("Add to Watchlist")).toBeEnabled();
@@ -227,13 +233,13 @@ describe("search persistence", () => {
     await renderHome(SEARCH_PLAYERS);
 
     await openSearchPage(user);
-    await user.type(screen.getByRole("textbox", { name: "Search players by name" }), "l");
+    await user.type(screen.getByRole("textbox", { name: "Search players by name" }), "la");
     await user.click(chip("Position", "WR"));
     await user.click(chip("Team", "DAL"));
     await user.click(screen.getByText("← Back to home"));
     await openSearchPage(user);
 
-    expect(screen.getByRole("textbox", { name: "Search players by name" })).toHaveValue("l");
+    expect(screen.getByRole("textbox", { name: "Search players by name" })).toHaveValue("la");
     expect(chip("Position", "WR")).toHaveAttribute("aria-pressed", "true");
     expect(chip("Team", "DAL")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("CeeDee Lamb")).toBeInTheDocument();
@@ -251,6 +257,7 @@ describe("search persistence", () => {
     await openSearchPage(user);
 
     expect(chip("Team", "PHI")).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(SEARCH_PLAYERS.length);
+    expect(screen.queryAllByRole("heading", { level: 2 })).toHaveLength(0);
+    expect(screen.getByText("Search a name or pick a position/team.")).toBeInTheDocument();
   });
 });
