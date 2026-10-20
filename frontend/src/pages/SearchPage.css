@@ -1,5 +1,5 @@
 .search-page {
-  max-width: 720px;
+  max-width: 960px;
   margin: 0 auto;
   padding: 2rem 1rem;
 }
@@ -19,7 +19,15 @@
   cursor: default;
 }
 
+.search-prompt,
 .no-results {
   margin-top: 2rem;
   color: #666;
+}
+
+/* Fixed-width cards, up to 5 per row; narrower screens fit fewer. */
+.search-page .player-grid {
+  grid-template-columns: repeat(auto-fill, 160px);
+  justify-content: center;
+  margin-top: 1.5rem;
 }

@@ -241,17 +241,32 @@ describe("PlayerPage compare panel with no watchlist candidates", () => {
   }
 
   it("shows a search locked to the player's position group, without the player", async () => {
-    const { panel } = await openEmptyPanel();
+    const { user, panel } = await openEmptyPanel();
+    const searchBox = within(panel).getByRole("combobox", {
+      name: "Search players by name",
+    });
 
-    expect(
-      within(panel).getByRole("textbox", { name: "Search players by name" }),
-    ).toBeInTheDocument();
-    expect(resultNames(panel)).toEqual(["Jawaan Taylor", "Creed Humphrey"]);
+    // Like the search page, it starts blank until there's a query.
+    expect(resultNames(panel)).toEqual([]);
+    expect(within(panel).getByText("Search a name or pick a team.")).toBeInTheDocument();
+
+    // "ja" also starts Lamar Jackson, but he's a QB, not OL.
+    await user.type(searchBox, "ja{Enter}");
+    expect(resultNames(panel)).toEqual(["Jawaan Taylor"]);
+
+    // "is" starts Isaac Seumalo, the player being compared.
+    await user.clear(searchBox);
+    await user.type(searchBox, "is{Enter}");
+    expect(resultNames(panel)).toEqual([]);
   });
 
   it("selects a search result for the side-by-side comparison", async () => {
     const { user, panel } = await openEmptyPanel();
 
+    await user.type(
+      within(panel).getByRole("combobox", { name: "Search players by name" }),
+      "creed{Enter}",
+    );
     await user.click(within(panel).getByRole("heading", { name: "Creed Humphrey" }));
 
     const view = within(panel).getByRole("region", {
@@ -276,7 +291,7 @@ describe("PlayerPage compare panel with no watchlist candidates", () => {
     await user.click(screen.getByRole("button", { name: "Compare" }));
 
     expect(
-      screen.queryByRole("textbox", { name: "Search players by name" }),
+      screen.queryByRole("combobox", { name: "Search players by name" }),
     ).not.toBeInTheDocument();
   });
 });

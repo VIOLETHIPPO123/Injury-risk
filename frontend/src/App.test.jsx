@@ -65,6 +65,13 @@ async function openWatchlistPage() {
   fireEvent.click(screen.getByRole("menuitem", { name: "Watchlist" }));
 }
 
+// Types a query into the search box and presses Enter to fill the results grid.
+function submitSearch(text) {
+  const searchBox = screen.getByRole("combobox", { name: "Search players by name" });
+  fireEvent.change(searchBox, { target: { value: text } });
+  fireEvent.keyDown(searchBox, { key: "Enter" });
+}
+
 afterEach(() => {
   vi.unstubAllGlobals();
 });
@@ -131,6 +138,7 @@ test("Add to Watchlist submits the expected payload and the player shows up on t
   await renderHome(PLAYERS);
   fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
   fireEvent.click(screen.getByRole("menuitem", { name: "Search" }));
+  submitSearch("brissett");
 
   // Act
   fireEvent.click(screen.getByText("Add to Watchlist"));
@@ -200,6 +208,7 @@ describe("watchlist updates without a page refresh", () => {
     fireEvent.click(screen.getByText("← Back to home"));
     fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "Search" }));
+    submitSearch("brissett");
 
     // Assert
     expect(screen.getByText("Add to Watchlist")).toBeEnabled();
@@ -227,13 +236,13 @@ describe("search persistence", () => {
     await renderHome(SEARCH_PLAYERS);
 
     await openSearchPage(user);
-    await user.type(screen.getByRole("textbox", { name: "Search players by name" }), "l");
+    await user.type(screen.getByRole("combobox", { name: "Search players by name" }), "la");
     await user.click(chip("Position", "WR"));
     await user.click(chip("Team", "DAL"));
     await user.click(screen.getByText("← Back to home"));
     await openSearchPage(user);
 
-    expect(screen.getByRole("textbox", { name: "Search players by name" })).toHaveValue("l");
+    expect(screen.getByRole("combobox", { name: "Search players by name" })).toHaveValue("la");
     expect(chip("Position", "WR")).toHaveAttribute("aria-pressed", "true");
     expect(chip("Team", "DAL")).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("CeeDee Lamb")).toBeInTheDocument();
@@ -251,6 +260,62 @@ describe("search persistence", () => {
     await openSearchPage(user);
 
     expect(chip("Team", "PHI")).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getAllByRole("heading", { level: 2 })).toHaveLength(SEARCH_PLAYERS.length);
+    expect(screen.queryAllByRole("heading", { level: 2 })).toHaveLength(0);
+    expect(screen.getByText("Search a name or pick a position/team.")).toBeInTheDocument();
+  });
+});
+
+describe("opening a player and going back", () => {
+  async function openMenuItem(user, label) {
+    await user.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
+    await user.click(screen.getByRole("menuitem", { name: label }));
+  }
+
+  it("returns to search, with the query kept, when the player was opened from search", async () => {
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+
+    await openMenuItem(user, "Search");
+    await user.type(screen.getByRole("combobox", { name: "Search players by name" }), "bri");
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.getByRole("heading", { level: 1, name: "Jacoby Brissett" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back to search" }));
+
+    expect(screen.getByRole("heading", { name: "Search Players" })).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Search players by name" })).toHaveValue("bri");
+  });
+
+  it("returns to the team roster when the player was opened from the formation", async () => {
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+
+    await openMenuItem(user, "Roster");
+    await user.click(screen.getByRole("button", { name: "ARI" }));
+    await user.click(screen.getByRole("heading", { name: "Jacoby Brissett" }));
+    expect(screen.getByRole("heading", { level: 1, name: "Jacoby Brissett" })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Back to team page" }));
+
+    expect(screen.getByRole("heading", { level: 1, name: "ARI" })).toBeInTheDocument();
+  });
+
+  it("uses the latest origin after opening players from both places", async () => {
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+
+    await openMenuItem(user, "Roster");
+    await user.click(screen.getByRole("button", { name: "ARI" }));
+    await user.click(screen.getByRole("heading", { name: "Jacoby Brissett" }));
+    await user.click(screen.getByRole("button", { name: "Back to team page" }));
+    await user.click(screen.getByRole("button", { name: "Back to teams" }));
+    await user.click(screen.getByRole("button", { name: "Back to home" }));
+
+    await openMenuItem(user, "Search");
+    await user.type(screen.getByRole("combobox", { name: "Search players by name" }), "jacoby{Enter}");
+    await user.click(screen.getByRole("heading", { level: 2, name: "Jacoby Brissett" }));
+    await user.click(screen.getByRole("button", { name: "Back to search" }));
+
+    expect(screen.getByRole("heading", { name: "Search Players" })).toBeInTheDocument();
   });
 });

@@ -3,13 +3,15 @@ import SearchBar from "../components/SearchBar";
 import FilterChips from "../components/FilterChips";
 import PlayerCard from "../components/PlayerCard";
 import RosterLink from "../components/RosterLink";
-import { EMPTY_SEARCH, filterPlayers } from "../utils/filterPlayers";
+import { EMPTY_SEARCH, filterPlayers, hasActiveQuery, hasActiveSearch } from "../utils/filterPlayers";
 import "./SearchPage.css";
+
+const MAX_SUGGESTIONS = 6;
 
 // `search`/`onSearchChange` let a parent own the query and chips so they survive leaving
 // the page; without them the page keeps its own state. `lockedPositions` restricts results
-// to those positions and hides the position chips. `onSelectPlayer` makes each result
-// clickable; without `onBack` there is no back link (e.g. when embedded in a panel).
+// to those positions and hides the position chips. Picking a suggestion or a result card
+// calls `onSelectPlayer`; without `onBack` there is no back link (e.g. when embedded in a panel).
 function SearchPage({
   players = [],
   onBack,
@@ -40,17 +42,20 @@ function SearchPage({
     : players;
   // In locked mode the position chips are hidden, so any stored selection is ignored.
   const positions = lockedPositions ? [] : current.positions;
-  const filteredPlayers = filterPlayers(pool, { ...current, positions });
+  const effectiveSearch = { ...current, positions };
+  const filteredPlayers = filterPlayers(pool, effectiveSearch);
 
-  const hasChips = positions.length > 0 || current.teams.length > 0;
-  const isActive = current.query !== "" || hasChips;
-
-  let noResults = `No players match "${current.query}".`;
-  if (hasChips) {
-    noResults = current.query
-      ? `No players match "${current.query}" with the selected filters.`
-      : "No players match the selected filters.";
-  }
+  // Until a query of 2+ characters is submitted or a chip is picked, show a prompt instead of results.
+  const searching = hasActiveSearch(effectiveSearch);
+  // Suggestions follow what's typed; the results grid waits for Enter.
+  const suggestions = hasActiveQuery(current.input)
+    ? filterPlayers(pool, { ...effectiveSearch, query: current.input }).slice(0, MAX_SUGGESTIONS)
+    : [];
+  const isActive =
+    current.input !== "" || current.query !== "" || positions.length > 0 || current.teams.length > 0;
+  const prompt = lockedPositions
+    ? "Search a name or pick a team."
+    : "Search a name or pick a position/team.";
 
   return (
     <section className="search-page">
@@ -58,8 +63,11 @@ function SearchPage({
       <h1>Search Players</h1>
 
       <SearchBar
-        value={current.query}
-        onSearch={(query) => update({ query })}
+        value={current.input}
+        onSearch={(input) => update({ input })}
+        onSubmit={(query) => update({ query })}
+        suggestions={suggestions}
+        onSelect={onSelectPlayer}
       />
 
       {!lockedPositions && (
@@ -86,7 +94,11 @@ function SearchPage({
         Reset
       </button>
 
-      {filteredPlayers.length > 0 ? (
+      {!searching && <p className="search-prompt">{prompt}</p>}
+      {searching && filteredPlayers.length === 0 && (
+        <p className="no-results">No players found</p>
+      )}
+      {filteredPlayers.length > 0 && (
         <div className="player-grid">
           {filteredPlayers.map((player) => (
             <PlayerCard
@@ -98,8 +110,6 @@ function SearchPage({
             />
           ))}
         </div>
-      ) : (
-        <p className="no-results">{noResults}</p>
       )}
     </section>
   );
