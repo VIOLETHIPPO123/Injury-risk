@@ -86,6 +86,81 @@ async function renderHome(players = []) {
   );
 }
 
+describe("homepage animation", () => {
+  it("renders the animated menu and workload pulse on load", async () => {
+    await renderHome();
+
+    expect(
+      screen.getByRole("button", { name: "Toggle navigation menu" }).closest(".fade-in"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("workload-pulse")).toBeInTheDocument();
+  });
+
+  it("animates the title in, while keeping its name readable as one word", async () => {
+    await renderHome();
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "SIDELINED" }),
+    ).toBeInTheDocument();
+    expect(screen.getAllByTestId("staggered-text")).toHaveLength(2);
+  });
+
+  it("holds the bars back for the title on first load, but not after returning home", async () => {
+    const user = userEvent.setup();
+    await renderHome();
+    const firstBarDelay = () =>
+      screen
+        .getByTestId("workload-pulse")
+        .querySelector(".workload-pulse-bar").style.animationDelay;
+    expect(firstBarDelay()).toBe("1300ms");
+
+    await user.click(
+      screen.getByRole("button", { name: "Toggle navigation menu" }),
+    );
+    await user.click(screen.getByRole("menuitem", { name: "About" }));
+    await user.click(screen.getByText("← Back to home"));
+
+    expect(firstBarDelay()).toBe("0ms");
+  });
+
+  it("fills the homepage with the backdrop and feature cards showing live counts", async () => {
+    savedEntries = [{ id: 1, playerId: 7, note: "" }];
+    await renderHome(PLAYERS);
+
+    expect(screen.getByTestId("home-backdrop")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Roster/ })).toHaveTextContent(
+      "Browse all 1 teams",
+    );
+    expect(screen.getByRole("button", { name: /Search/ })).toHaveTextContent(
+      "Find any of 1 players",
+    );
+    expect(
+      await screen.findByRole("button", { name: /On your list: 1/ }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens a page from its feature card on the first click", async () => {
+    const user = userEvent.setup();
+    await renderHome();
+
+    await user.click(screen.getByRole("button", { name: /Watchlist/ }));
+
+    expect(screen.getByRole("heading", { name: "Watchlist" })).toBeInTheDocument();
+    expect(screen.queryByTestId("home-backdrop")).not.toBeInTheDocument();
+  });
+
+  it("doesn't delay the menu: it opens on the first click after load", async () => {
+    const user = userEvent.setup();
+    await renderHome();
+
+    await user.click(
+      screen.getByRole("button", { name: "Toggle navigation menu" }),
+    );
+
+    expect(screen.getByRole("menuitem", { name: "Roster" })).toBeInTheDocument();
+  });
+});
+
 describe("homepage navigation", () => {
   it.each([
     ["Roster", "Rosters"],

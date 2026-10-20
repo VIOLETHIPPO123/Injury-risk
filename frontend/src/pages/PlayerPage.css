@@ -245,15 +245,6 @@
   color: var(--text-h);
 }
 
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 .player-page-note {
   margin-top: 32px;
   font-size: 13px;
