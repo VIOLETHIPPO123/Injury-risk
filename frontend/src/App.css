@@ -28,3 +28,10 @@
   color: #b91c1c;
   background: #b91c1c1f;
 }
+
+/* The fade animation makes its wrapper a stacking context, which traps the menu's own
+   z-index inside it. Lifting the wrapper keeps the open dropdown above the homepage art. */
+.home-menu-layer {
+  position: relative;
+  z-index: 20;
+}

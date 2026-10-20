@@ -1,5 +1,9 @@
 import { useEffect, useState } from "react";
 import NavMenu from "./components/NavMenu";
+import FadeIn from "./components/FadeIn";
+import WorkloadPulse from "./components/WorkloadPulse";
+import FeatureCards from "./components/FeatureCards";
+import HomeBackdrop from "./components/HomeBackdrop";
 import RostersPage from "./pages/RostersPage";
 import TeamRosterPage from "./pages/TeamRosterPage";
 import SearchPage from "./pages/SearchPage";
@@ -18,8 +22,14 @@ import { EMPTY_SEARCH } from "./utils/filterPlayers";
 import "./App.css";
 import Header from "./components/Header";
 
+// Roughly when the header's title animation finishes; the homepage bars start rising then.
+const TITLE_INTRO_MS = 1300;
+
 function App() {
   const [view, setView] = useState("home");
+  // The header animates only once, so after the first visit the bars shouldn't wait for it.
+  const [hasLeftHome, setHasLeftHome] = useState(false);
+  if (view !== "home" && !hasLeftHome) setHasLeftHome(true);
   const [players, setPlayers] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [selectedTeam, setSelectedTeam] = useState(null);
@@ -176,15 +186,46 @@ function App() {
   } else if (view === "acwr-info") {
     content = <AcwrInfoPage onBack={() => setView("about")} />;
   } else {
+    const introDelay = hasLeftHome ? 0 : TITLE_INTRO_MS;
+    const teamCount = new Set(players.map((p) => p.team)).size;
     content = (
-      <NavMenu
-        items={[
-          { label: "Roster", onClick: () => setView("rosters") },
-          { label: "Search", onClick: () => setView("search") },
-          { label: "Watchlist", onClick: () => setView("watchlist") },
-          { label: "About", onClick: () => setView("about") },
-        ]}
-      />
+      <>
+        <HomeBackdrop />
+        <FadeIn className="home-menu-layer">
+          <NavMenu
+            items={[
+              { label: "Roster", onClick: () => setView("rosters") },
+              { label: "Search", onClick: () => setView("search") },
+              { label: "Watchlist", onClick: () => setView("watchlist") },
+              { label: "About", onClick: () => setView("about") },
+            ]}
+          />
+        </FadeIn>
+        <WorkloadPulse delay={introDelay} />
+        <FeatureCards
+          delay={introDelay + 500}
+          items={[
+            {
+              id: "roster",
+              label: "Roster",
+              detail: `Browse all ${teamCount} teams`,
+              onClick: () => setView("rosters"),
+            },
+            {
+              id: "search",
+              label: "Search",
+              detail: `Find any of ${players.length} players`,
+              onClick: () => setView("search"),
+            },
+            {
+              id: "watchlist",
+              label: "Watchlist",
+              detail: `On your list: ${watchlist.length}`,
+              onClick: () => setView("watchlist"),
+            },
+          ]}
+        />
+      </>
     );
   }
 

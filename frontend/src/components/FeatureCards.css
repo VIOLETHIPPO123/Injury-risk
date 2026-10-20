@@ -1,0 +1,104 @@
+.feature-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  max-width: 760px;
+  margin: 40px auto 0;
+}
+
+.feature-card {
+  --card-color: var(--accent);
+
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 20px;
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--card-color);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  /* Entrance uses `translate`, hover uses `transform`, so the two never fight. */
+  animation: feature-card-rise 0.5s ease-out both;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+
+  &:hover,
+  &:focus-visible {
+    transform: translateY(-4px);
+    box-shadow:
+      var(--shadow),
+      0 0 0 2px color-mix(in srgb, var(--card-color) 40%, transparent);
+  }
+}
+
+.feature-card-roster {
+  --card-color: var(--accent);
+}
+
+.feature-card-search {
+  --card-color: #2563eb;
+}
+
+.feature-card-watchlist {
+  --card-color: #0d9488;
+}
+
+@media (prefers-color-scheme: dark) {
+  .feature-card-search {
+    --card-color: #60a5fa;
+  }
+
+  .feature-card-watchlist {
+    --card-color: #2dd4bf;
+  }
+}
+
+.feature-card-icon {
+  display: inline-flex;
+  padding: 8px;
+  border-radius: 10px;
+  color: var(--card-color);
+  background: color-mix(in srgb, var(--card-color) 14%, transparent);
+}
+
+.feature-card-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.feature-card-label {
+  margin-top: 6px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.feature-card-detail {
+  font-size: 15px;
+}
+
+@keyframes feature-card-rise {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+
+  to {
+    opacity: 1;
+    translate: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-card {
+    animation: none;
+    transition: none;
+  }
+}
