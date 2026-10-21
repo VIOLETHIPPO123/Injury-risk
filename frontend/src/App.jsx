@@ -223,6 +223,12 @@ function App() {
               detail: `On your list: ${watchlist.length}`,
               onClick: () => setView("watchlist"),
             },
+            {
+              id: "about",
+              label: "About",
+              detail: "What Sidelined is and how ACWR works",
+              onClick: () => setView("about"),
+            },
           ]}
         />
       </>

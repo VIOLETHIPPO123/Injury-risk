@@ -17,6 +17,12 @@ const ICONS = {
       <circle cx="12" cy="12" r="3" />
     </>
   ),
+  about: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 11v5M12 8h.01" />
+    </>
+  ),
 };
 const STAGGER_MS = 120;
 

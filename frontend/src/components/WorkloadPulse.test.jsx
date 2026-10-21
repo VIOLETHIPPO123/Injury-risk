@@ -40,14 +40,12 @@ describe("WorkloadPulse", () => {
     ]);
   });
 
-  it("ends on the tallest bar, labelled with its ACWR", () => {
+  it("ends on the tallest bar", () => {
     render(<WorkloadPulse />);
     const heights = bars().map((bar) => parseFloat(bar.style.height));
 
     expect(heights.at(-1)).toBe(100);
     expect(Math.max(...heights.slice(0, -1))).toBeLessThan(100);
-    // 88 snaps against a 55.5 four-week average.
-    expect(bars().at(-1)).toHaveTextContent("1.59");
   });
 
   it("staggers the bars after the given delay", () => {
@@ -58,18 +56,18 @@ describe("WorkloadPulse", () => {
     );
   });
 
-  it("explains the colors with a legend and a caption", () => {
+  it("shows only the bars: no value label, legend or caption", () => {
     render(<WorkloadPulse />);
 
-    for (const label of ["Not enough history", "Normal", "Caution", "High risk"]) {
-      expect(screen.getByText(label)).toBeInTheDocument();
-    }
-    expect(screen.getByRole("figure")).toHaveTextContent("spike to ACWR 1.59");
+    expect(screen.getByTestId("workload-pulse")).toHaveTextContent("");
   });
 
-  it("hides the bars themselves from screen readers", () => {
+  it("is hidden from screen readers because it is decoration", () => {
     render(<WorkloadPulse />);
 
-    expect(bars()[0].parentElement).toHaveAttribute("aria-hidden", "true");
+    expect(screen.getByTestId("workload-pulse")).toHaveAttribute(
+      "aria-hidden",
+      "true",
+    );
   });
 });
