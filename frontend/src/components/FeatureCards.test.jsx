@@ -8,6 +8,7 @@ function items(overrides = {}) {
     { id: "roster", label: "Roster", detail: "Browse all 32 teams", onClick: vi.fn() },
     { id: "search", label: "Search", detail: "Find any of 900 players", onClick: vi.fn() },
     { id: "watchlist", label: "Watchlist", detail: "On your list: 2", onClick: vi.fn() },
+    { id: "about", label: "About", detail: "What Sidelined is", onClick: vi.fn() },
   ].map((item) => ({ ...item, ...overrides[item.id] }));
 }
 
@@ -18,7 +19,7 @@ describe("FeatureCards", () => {
     const roster = screen.getByRole("button", { name: /Roster/ });
     expect(roster).toHaveTextContent("Browse all 32 teams");
     expect(roster).toHaveClass("feature-card-roster");
-    expect(screen.getAllByRole("button")).toHaveLength(3);
+    expect(screen.getAllByRole("button")).toHaveLength(4);
   });
 
   it("staggers the cards' entrance after the delay", () => {
@@ -26,7 +27,7 @@ describe("FeatureCards", () => {
 
     expect(
       screen.getAllByRole("button").map((card) => card.style.animationDelay),
-    ).toEqual(["500ms", "620ms", "740ms"]);
+    ).toEqual(["500ms", "620ms", "740ms", "860ms"]);
   });
 
   it("is clickable straight away, before its entrance animation starts", async () => {

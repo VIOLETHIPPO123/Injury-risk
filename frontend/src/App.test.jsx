@@ -149,6 +149,17 @@ describe("homepage animation", () => {
     expect(screen.queryByTestId("home-backdrop")).not.toBeInTheDocument();
   });
 
+  it("has an About card that opens the About page", async () => {
+    const user = userEvent.setup();
+    await renderHome();
+
+    await user.click(screen.getByRole("button", { name: /About/ }));
+
+    expect(
+      screen.getByRole("heading", { name: "About Sidelined" }),
+    ).toBeInTheDocument();
+  });
+
   it("doesn't delay the menu: it opens on the first click after load", async () => {
     const user = userEvent.setup();
     await renderHome();

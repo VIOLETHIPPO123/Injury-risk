@@ -28,22 +28,10 @@
 }
 
 .workload-pulse-bar {
-  position: relative;
   flex: 1;
   border-radius: 4px 4px 0 0;
   transform-origin: bottom;
   animation: workload-pulse-grow 0.5s ease-out both;
-}
-
-.workload-pulse-value {
-  position: absolute;
-  bottom: 100%;
-  left: 50%;
-  translate: -50% -6px;
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--risk-high);
 }
 
 /* Scoped: the player cards use these same risk-* class names for their own styling. */
@@ -61,34 +49,6 @@
 
 .workload-pulse .risk-high {
   background: var(--risk-high);
-}
-
-.workload-pulse-legend {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 8px 20px;
-  margin: 14px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 14px;
-}
-
-.workload-pulse-legend li {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.workload-pulse-swatch {
-  width: 12px;
-  height: 12px;
-  border-radius: 3px;
-}
-
-.workload-pulse figcaption {
-  margin-top: 8px;
-  font-size: 14px;
 }
 
 @keyframes workload-pulse-grow {
