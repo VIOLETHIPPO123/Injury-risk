@@ -3,18 +3,17 @@ package com.sidelined.backend.repository;
 import com.sidelined.backend.model.Player;
 import org.springframework.stereotype.Repository;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
-// Hard-coded stand-in until the external API module. Moved here unchanged from
-// PlayerService, which now only asks this repository for data.
+// Hard-coded stand-in until the external API module. The lookups live in
+// InMemoryReadOnlyRepository; this class only holds the players, keyed by id.
 @Repository
-public class InMemoryPlayerRepository implements PlayerRepository {
+public class InMemoryPlayerRepository
+        extends InMemoryReadOnlyRepository<Player, Long>
+        implements PlayerRepository {
 
-    // Starting offensive lineups for eachteam for the 2026-27 season. Names and teams are real;
-    // snap counts are illustrative placeholders until real game data is wired in.
+    // Starting offense, defense and special teams for each team for the
+    // 2026-27 season. Names and teams are real; snap counts are illustrative
+    // placeholders until real game data is wired in.
     private static final List<Player> PLAYERS = List.of(
 
         // Offensive Players
@@ -1061,23 +1060,7 @@ public class InMemoryPlayerRepository implements PlayerRepository {
 
     );
 
-    // Lookups by id without scanning the whole list. Collectors.toMap also fails fast on a duplicate.
-    private final Map<Long, Player> byId = PLAYERS.stream()
-        .collect(Collectors.toMap(Player::getId, Function.identity()));
-
-    // The original order, so GET responses are unchanged.
-    @Override
-    public List<Player> findAll() {
-        return PLAYERS;
-    }
-
-    @Override
-    public Optional<Player> findById(Long id) {
-        return Optional.ofNullable(byId.get(id));
-    }
-
-    @Override
-    public boolean existsById(Long id) {
-        return byId.containsKey(id);
+    public InMemoryPlayerRepository() {
+        super(PLAYERS, Player::getId);
     }
 }
