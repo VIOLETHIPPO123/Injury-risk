@@ -12,7 +12,8 @@ import java.util.stream.Collectors;
 import static org.junit.jupiter.api.Assertions.*;
 
 // The player data is hard-coded here, so these tests guard the data itself: the watchlist looks
-// players up by id, the formation page expects a full lineup per team, and ACWR needs sane snaps.
+// players up by id and the formation page expects a full lineup per team. Snap counts need no
+// test here: Workload rejects bad ones, so invalid data fails as soon as the list is built.
 class InMemoryPlayerRepositoryTest {
 
     private final InMemoryPlayerRepository playerRepository = new InMemoryPlayerRepository();
@@ -158,19 +159,6 @@ class InMemoryPlayerRepositoryTest {
                 assertEquals(1L, positionCounts.getOrDefault(position, 0L),
                     team.getKey() + " should have exactly one " + position);
             }
-        }
-    }
-
-    @Test
-    void findAll_snapCountsAreValidForAcwr() {
-        // Act
-        List<Player> players = playerRepository.findAll();
-
-        // Assert — the last game is one of the last four, so it can't exceed their total.
-        for (Player player : players) {
-            assertTrue(player.getSnapsLastGame() >= 0, player.getName() + " has negative snaps");
-            assertTrue(player.getSnapsLastGame() <= player.getSnapsLast4Games(),
-                player.getName() + " has more snaps last game than in the last four games");
         }
     }
 }
