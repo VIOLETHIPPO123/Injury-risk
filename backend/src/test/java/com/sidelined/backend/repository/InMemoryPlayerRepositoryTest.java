@@ -117,7 +117,7 @@ class InMemoryPlayerRepositoryTest {
                 assertEquals(1L, positionCounts.getOrDefault(position, 0L),
                     team.getKey() + " should have exactly one " + position);
             }
-            assertEquals(3L, positionCounts.getOrDefault("WR", 0L), team.getKey() + " should have three WRs");
+            assertEquals(3L, positionCounts.getOrDefault(Position.WR, 0L), team.getKey() + " should have three WRs");
         }
     }
 
