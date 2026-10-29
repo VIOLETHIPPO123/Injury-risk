@@ -1,4 +1,5 @@
 import { acwrDistance, calculateAcwr, riskLevel, tierRank } from "./acwr";
+import { compareRisk } from "./sortByRisk";
 
 function stats(player) {
   const acwr = calculateAcwr(player.snapsLastGame, player.snapsLast4Games);
@@ -49,18 +50,16 @@ export function comparisonRows(first, second) {
   ];
 }
 
-// Higher tier is riskier; within a tier, the ACWR further from 1.0 is riskier.
+// Uses the shared risk rule (compareRisk). Equal risk is a tie here, not an order by name.
 export function compareVerdict(first, second) {
   const a = stats(first);
   const b = stats(second);
 
   if (a.acwr === null || b.acwr === null) return "Not enough data to call it.";
 
-  const riskier =
-    riskierOf(tierRank(a.risk), tierRank(b.risk)) ??
-    riskierOf(acwrDistance(a.acwr), acwrDistance(b.acwr));
-  if (riskier === null) return "Too close to call.";
+  const order = compareRisk(a.acwr, b.acwr);
+  if (order === 0) return "Too close to call.";
 
-  const safer = riskier === 0 ? second : first;
+  const safer = order > 0 ? second : first;
   return `Safer start: ${safer.name}.`;
 }
