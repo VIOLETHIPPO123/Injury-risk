@@ -2,6 +2,8 @@ package com.sidelined.backend.repository;
 
 import com.sidelined.backend.model.Player;
 import com.sidelined.backend.model.Team;
+import com.sidelined.backend.model.NflTeam;
+import com.sidelined.backend.model.Position;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Optional;
@@ -73,8 +75,8 @@ class InMemoryPlayerRepositoryTest {
         for (Player player : players) {
             assertNotNull(player.getId());
             assertFalse(player.getName() == null || player.getName().isBlank(), "Missing name for id " + player.getId());
-            assertFalse(player.getTeam() == null || player.getTeam().isBlank(), "Missing team for " + player.getName());
-            assertFalse(player.getPosition() == null || player.getPosition().isBlank(), "Missing position for " + player.getName());
+            assertNotNull(player.getTeam(), "Missing team for " + player.getName());
+            assertNotNull(player.getPosition(), "Missing position for " + player.getName());
         }
     }
 
@@ -90,7 +92,7 @@ class InMemoryPlayerRepositoryTest {
 
         // Assert
         for (Player player : players) {
-            assertTrue(teamCodes.contains(player.getTeam()),
+            assertTrue(teamCodes.contains(player.getTeam().getCode()),
                 player.getName() + " is on unknown team " + player.getTeam());
         }
     }
@@ -98,18 +100,20 @@ class InMemoryPlayerRepositoryTest {
     @Test
     void findAll_everyTeamHasAFullOffensiveLineup() {
         // Arrange — the formation page places one of each of these, plus three WRs. FB is optional.
-        List<String> singlePositions = List.of("QB", "RB", "TE", "LT", "LG", "C", "RG", "RT");
+        List<Position> singlePositions = List.of(
+        Position.QB, Position.RB, Position.TE, Position.LT,
+        Position.LG, Position.C, Position.RG, Position.RT);
 
         // Act
-        Map<String, List<Player>> playersByTeam = playerRepository.findAll().stream()
+        Map<NflTeam, List<Player>> playersByTeam = playerRepository.findAll().stream()
             .collect(Collectors.groupingBy(Player::getTeam));
 
         // Assert
-        for (Map.Entry<String, List<Player>> team : playersByTeam.entrySet()) {
-            Map<String, Long> positionCounts = team.getValue().stream()
+        for (Map.Entry<NflTeam, List<Player>> team : playersByTeam.entrySet()) {
+            Map<Position, Long> positionCounts = team.getValue().stream()
                 .collect(Collectors.groupingBy(Player::getPosition, Collectors.counting()));
 
-            for (String position : singlePositions) {
+            for (Position position : singlePositions) {
                 assertEquals(1L, positionCounts.getOrDefault(position, 0L),
                     team.getKey() + " should have exactly one " + position);
             }
@@ -120,41 +124,43 @@ class InMemoryPlayerRepositoryTest {
     @Test
     void findAll_everyTeamHasAFullDefensiveLineup() {
         // Arrange — the formation page places two DEs, three CBs, one FS, and one SS. Number of LBs and DTs depends on formation, so we don't check those.
-        List<String> singlePositions = List.of("FS", "SS");
+        List<Position> singlePositions = List.of(Position.FS, Position.SS);
 
         // Act
-        Map<String, List<Player>> playersByTeam = playerRepository.findAll().stream()
+        Map<NflTeam, List<Player>> playersByTeam = playerRepository.findAll().stream()
             .collect(Collectors.groupingBy(Player::getTeam));
 
         // Assert
-        for (Map.Entry<String, List<Player>> team : playersByTeam.entrySet()) {
-            Map<String, Long> positionCounts = team.getValue().stream()
+        for (Map.Entry<NflTeam, List<Player>> team : playersByTeam.entrySet()) {
+            Map<Position, Long> positionCounts = team.getValue().stream()
                 .collect(Collectors.groupingBy(Player::getPosition, Collectors.counting()));
 
-            for (String position : singlePositions) {
+            for (Position position : singlePositions) {
                 assertEquals(1L, positionCounts.getOrDefault(position, 0L),
                     team.getKey() + " should have exactly one " + position);
             }
-            assertEquals(2L, positionCounts.getOrDefault("DE", 0L), team.getKey() + " should have two DEs");
-            assertEquals(3L, positionCounts.getOrDefault("CB", 0L), team.getKey() + " should have three CBs");
+            assertEquals(2L, positionCounts.getOrDefault(Position.DE, 0L), team.getKey() + " should have two DEs");
+            assertEquals(3L, positionCounts.getOrDefault(Position.CB, 0L), team.getKey() + " should have three CBs");
         }
     }
 
     @Test
     void findAll_everyTeamHasAFullSpecialTeamsLineup() {
         // Arrange — the formation page places one of each of these.
-        List<String> singlePositions = List.of("PK", "P", "H", "PR", "KR", "LS");
+        List<Position> singlePositions = List.of(
+            Position.PK, Position.P, Position.H,
+            Position.PR, Position.KR, Position.LS);
 
         // Act
-        Map<String, List<Player>> playersByTeam = playerRepository.findAll().stream()
+        Map<NflTeam, List<Player>> playersByTeam = playerRepository.findAll().stream()
             .collect(Collectors.groupingBy(Player::getTeam));
 
         // Assert
-        for (Map.Entry<String, List<Player>> team : playersByTeam.entrySet()) {
-            Map<String, Long> positionCounts = team.getValue().stream()
+        for (Map.Entry<NflTeam, List<Player>> team : playersByTeam.entrySet()) {
+            Map<Position, Long> positionCounts = team.getValue().stream()
                 .collect(Collectors.groupingBy(Player::getPosition, Collectors.counting()));
 
-            for (String position : singlePositions) {
+            for (Position position : singlePositions) {
                 assertEquals(1L, positionCounts.getOrDefault(position, 0L),
                     team.getKey() + " should have exactly one " + position);
             }
