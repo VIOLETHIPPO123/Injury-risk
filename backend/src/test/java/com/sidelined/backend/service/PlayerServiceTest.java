@@ -1,6 +1,8 @@
 package com.sidelined.backend.service;
 
 import com.sidelined.backend.model.Player;
+import com.sidelined.backend.model.NflTeam;
+import com.sidelined.backend.model.Position;
 import com.sidelined.backend.repository.PlayerRepository;
 import org.junit.jupiter.api.Test;
 import java.util.List;
@@ -18,7 +20,7 @@ class PlayerServiceTest {
     @Test
     void getAllPlayers_returnsWhatTheRepositoryHolds() {
         // Arrange
-        List<Player> stored = List.of(new Player(1L, "Jacoby Brissett", "ARI", "QB", 68, 253));
+        List<Player> stored = List.of(new Player(1L, "Jacoby Brissett", NflTeam.ARI, Position.QB, 68, 253));
         when(playerRepository.findAll()).thenReturn(stored);
 
         // Act
