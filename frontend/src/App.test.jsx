@@ -335,17 +335,39 @@ describe("search persistence", () => {
     expect(screen.queryByText("A.J. Brown")).not.toBeInTheDocument();
   });
 
+  it("keeps the risk sort and its direction after leaving search and coming back", async () => {
+    const user = userEvent.setup();
+    await renderHome(SEARCH_PLAYERS);
+
+    await openSearchPage(user);
+    await user.click(screen.getByRole("button", { name: "Sort by risk" }));
+    await user.click(screen.getByRole("button", { name: "Lowest risk first" }));
+    await user.click(screen.getByText("← Back to home"));
+    await openSearchPage(user);
+
+    expect(screen.getByRole("button", { name: "Sort by risk" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Lowest risk first" })).toHaveAttribute("aria-pressed", "true");
+    // ACWR: Brown 1.05, Lamb 1.04 and Prescott 1.08 are all low; lowest first = closest to 1.0.
+    expect(screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent)).toEqual([
+      "CeeDee Lamb",
+      "A.J. Brown",
+      "Dak Prescott",
+    ]);
+  });
+
   it("starts empty again after Reset, even after leaving and coming back", async () => {
     const user = userEvent.setup();
     await renderHome(SEARCH_PLAYERS);
 
     await openSearchPage(user);
     await user.click(chip("Team", "PHI"));
+    await user.click(screen.getByRole("button", { name: "Sort by risk" }));
     await user.click(screen.getByRole("button", { name: "Reset" }));
     await user.click(screen.getByText("← Back to home"));
     await openSearchPage(user);
 
     expect(chip("Team", "PHI")).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Sort by risk" })).toHaveAttribute("aria-pressed", "false");
     expect(screen.queryAllByRole("heading", { level: 2 })).toHaveLength(0);
     expect(screen.getByText("Search a name or pick a position/team.")).toBeInTheDocument();
   });

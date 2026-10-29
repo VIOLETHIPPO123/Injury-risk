@@ -4,7 +4,10 @@ import FilterChips from "../components/FilterChips";
 import PlayerCard from "../components/PlayerCard";
 import RosterLink from "../components/RosterLink";
 import { EMPTY_SEARCH, filterPlayers, hasActiveQuery, hasActiveSearch } from "../utils/filterPlayers";
+import { sortByRisk } from "../utils/sortByRisk";
 import "./SearchPage.css";
+
+const DIRECTION_LABELS = { desc: "Highest risk first", asc: "Lowest risk first" };
 
 const MAX_SUGGESTIONS = 6;
 
@@ -23,7 +26,8 @@ function SearchPage({
   onSelectPlayer,
 }) {
   const [localSearch, setLocalSearch] = useState(EMPTY_SEARCH);
-  const current = search ?? localSearch;
+  // Defaults fill in any field a parent's search object doesn't have yet (e.g. the sort).
+  const current = { ...EMPTY_SEARCH, ...(search ?? localSearch) };
   const setSearch = onSearchChange ?? setLocalSearch;
   const update = (changes) => setSearch({ ...current, ...changes });
 
@@ -43,16 +47,22 @@ function SearchPage({
   // In locked mode the position chips are hidden, so any stored selection is ignored.
   const positions = lockedPositions ? [] : current.positions;
   const effectiveSearch = { ...current, positions };
-  const filteredPlayers = filterPlayers(pool, effectiveSearch);
+  const matches = filterPlayers(pool, effectiveSearch);
+  const filteredPlayers = current.sortByRisk ? sortByRisk(matches, current.sortDirection) : matches;
 
-  // Until a query of 2+ characters is submitted or a chip is picked, show a prompt instead of results.
+  // Until a query of 2+ characters is submitted, a chip is picked or the risk sort is on,
+  // show a prompt instead of results.
   const searching = hasActiveSearch(effectiveSearch);
   // Suggestions follow what's typed; the results grid waits for Enter.
   const suggestions = hasActiveQuery(current.input)
     ? filterPlayers(pool, { ...effectiveSearch, query: current.input }).slice(0, MAX_SUGGESTIONS)
     : [];
   const isActive =
-    current.input !== "" || current.query !== "" || positions.length > 0 || current.teams.length > 0;
+    current.input !== "" ||
+    current.query !== "" ||
+    positions.length > 0 ||
+    current.teams.length > 0 ||
+    current.sortByRisk;
   const prompt = lockedPositions
     ? "Search a name or pick a team."
     : "Search a name or pick a position/team.";
@@ -84,6 +94,32 @@ function SearchPage({
         selected={current.teams}
         onChange={(selected) => update({ teams: selected })}
       />
+
+      <div className="search-sort">
+        <button
+          type="button"
+          className={`search-sort-toggle ${current.sortByRisk ? "selected" : ""}`}
+          aria-pressed={current.sortByRisk}
+          onClick={() => update({ sortByRisk: !current.sortByRisk })}
+        >
+          Sort by risk
+        </button>
+        {current.sortByRisk && (
+          <div className="search-sort-order" role="group" aria-label="Sort order">
+            {Object.entries(DIRECTION_LABELS).map(([direction, label]) => (
+              <button
+                key={direction}
+                type="button"
+                className={direction === current.sortDirection ? "selected" : ""}
+                aria-pressed={direction === current.sortDirection}
+                onClick={() => update({ sortDirection: direction })}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <button
         type="button"

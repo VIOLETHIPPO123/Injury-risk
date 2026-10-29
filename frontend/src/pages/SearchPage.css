@@ -19,6 +19,56 @@
   cursor: default;
 }
 
+/* The sort chip, with the order picker on its own line underneath once the sort is on. */
+.search-sort {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 1rem;
+}
+
+.search-sort-toggle {
+  padding: 4px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.search-sort-toggle.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+/* Segmented control: a grey track, the chosen option boxed. */
+.search-sort-order {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--code-bg);
+}
+
+.search-sort-order button {
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-h);
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.search-sort-order button.selected {
+  border-color: var(--text-h);
+  background: var(--bg);
+}
+
 .search-prompt,
 .no-results {
   margin-top: 2rem;

@@ -44,9 +44,10 @@ export function hasActiveQuery(query) {
   return normalize(query).length >= MIN_QUERY_LENGTH;
 }
 
-// True when the search would show results: a long-enough query or any selected chip.
-export function hasActiveSearch({ query = "", positions = [], teams = [] }) {
-  return hasActiveQuery(query) || positions.length > 0 || teams.length > 0;
+// True when the search would show results: a long-enough query, any selected chip, or the
+// risk sort, which on its own lists every player.
+export function hasActiveSearch({ query = "", positions = [], teams = [], sortByRisk = false }) {
+  return hasActiveQuery(query) || positions.length > 0 || teams.length > 0 || sortByRisk;
 }
 
 // Every word of the query must match the start of a word in the name: "jo al" finds
@@ -85,15 +86,23 @@ export function filterPlayersByName(players, query) {
 
 // The search page's state: the text in the search box (`input`, which drives the
 // suggestions), the query last submitted with Enter (`query`, which drives the results),
-// and the selected position and team chips.
-export const EMPTY_SEARCH = { input: "", query: "", positions: [], teams: [] };
+// the selected position and team chips, and the risk sort with its direction ("desc" = highest first).
+export const EMPTY_SEARCH = {
+  input: "",
+  query: "",
+  positions: [],
+  teams: [],
+  sortByRisk: false,
+  sortDirection: "desc",
+};
 
 // A category with nothing selected doesn't filter.
 function matchesAny(selected, value) {
   return selected.length === 0 || selected.includes(value);
 }
 
-// Nothing to search on (no long-enough query and no chips) returns no players.
+// Nothing to search on (no long-enough query, no chips and no risk sort) returns no players.
+// The risk sort only widens what counts as a search here; SearchPage does the ordering.
 // Within a category a player matches any selected value (QB or RB); across categories
 // they must match all of them (position and team), as well as the name query.
 export function filterPlayers(players, search) {

@@ -48,6 +48,11 @@ describe("with nothing to search on", () => {
   test("a 1-character query is ignored when chips are selected", () => {
     expect(filterPlayers(PLAYERS, search({ query: "x", teams: ["PHI"] }))).toEqual([BROWN, BARKLEY]);
   });
+
+  test("the risk sort on its own counts as a search and returns every player", () => {
+    expect(hasActiveSearch(search({ sortByRisk: true }))).toBe(true);
+    expect(filterPlayers(PLAYERS, search({ sortByRisk: true }))).toEqual(PLAYERS);
+  });
 });
 
 // ---------- Word-start matching ----------

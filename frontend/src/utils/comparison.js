@@ -1,6 +1,4 @@
-import { calculateAcwr, riskLevel } from "./acwr";
-
-const TIER_RANK = { low: 0, medium: 1, high: 2 };
+import { acwrDistance, calculateAcwr, riskLevel, tierRank } from "./acwr";
 
 function stats(player) {
   const acwr = calculateAcwr(player.snapsLastGame, player.snapsLast4Games);
@@ -16,15 +14,6 @@ function stats(player) {
 function riskierOf(first, second) {
   if (first === null || second === null || first === second) return null;
   return first > second ? 0 : 1;
-}
-
-// How far a workload is from "business as usual" (1.0), in either direction.
-function acwrDistance(acwr) {
-  return acwr === null ? null : Math.abs(acwr - 1);
-}
-
-function tierRank(risk) {
-  return TIER_RANK[risk.tier] ?? null;
 }
 
 function formatNumber(value) {

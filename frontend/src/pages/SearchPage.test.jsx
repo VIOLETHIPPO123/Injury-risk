@@ -278,10 +278,95 @@ test("when a parent owns the search, the page shows it and reports every change"
     query: "dak",
     positions: ["QB"],
     teams: ["DAL"],
+    sortByRisk: false,
+    sortDirection: "desc",
   });
 
   await user.click(screen.getByRole("button", { name: "Reset" }));
   expect(onSearchChange).toHaveBeenLastCalledWith(EMPTY_SEARCH);
+});
+
+// ---------- Sort by risk ----------
+
+// ACWR = last game ÷ (last four ÷ 4).
+const RISK_PLAYERS = [
+  { id: 11, name: "Normal Nate", team: "DAL", position: "WR", snapsLastGame: 50, snapsLast4Games: 200 }, // 1.0, low
+  { id: 12, name: "Nodata Ned", team: "DAL", position: "QB", snapsLastGame: 0, snapsLast4Games: 0 }, // no data
+  { id: 13, name: "Spiking Sam", team: "PHI", position: "RB", snapsLastGame: 80, snapsLast4Games: 200 }, // 1.6, high
+  { id: 14, name: "Elevated Eli", team: "PHI", position: "WR", snapsLastGame: 70, snapsLast4Games: 200 }, // 1.4, medium
+  { id: 15, name: "Spiking Steve", team: "DAL", position: "TE", snapsLastGame: 90, snapsLast4Games: 200 }, // 1.8, high
+];
+
+function sortToggle() {
+  return screen.getByRole("button", { name: "Sort by risk" });
+}
+
+test("with no query or filters, turning the sort on lists every player, highest risk first", async () => {
+  const user = userEvent.setup();
+  render(<SearchPage players={RISK_PLAYERS} onBack={() => {}} />);
+
+  expect(shownNames()).toEqual([]);
+  await user.click(sortToggle());
+
+  expect(sortToggle()).toHaveAttribute("aria-pressed", "true");
+  expect(screen.queryByText("Search a name or pick a position/team.")).not.toBeInTheDocument();
+  expect(shownNames()).toEqual([
+    "Spiking Steve",
+    "Spiking Sam",
+    "Elevated Eli",
+    "Normal Nate",
+    "Nodata Ned",
+  ]);
+});
+
+test("the order picker reverses the order, and players with no data stay last as \"No data\"", async () => {
+  const user = userEvent.setup();
+  render(<SearchPage players={RISK_PLAYERS} onBack={() => {}} />);
+
+  expect(screen.queryByRole("group", { name: "Sort order" })).not.toBeInTheDocument();
+  await user.click(sortToggle());
+  expect(screen.getByRole("button", { name: "Highest risk first" })).toHaveAttribute("aria-pressed", "true");
+  await user.click(screen.getByRole("button", { name: "Lowest risk first" }));
+
+  expect(screen.getByRole("button", { name: "Lowest risk first" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByRole("button", { name: "Highest risk first" })).toHaveAttribute("aria-pressed", "false");
+  expect(shownNames()).toEqual([
+    "Normal Nate",
+    "Elevated Eli",
+    "Spiking Sam",
+    "Spiking Steve",
+    "Nodata Ned",
+  ]);
+  const noDataCard = screen.getByRole("heading", { name: "Nodata Ned" }).closest("article");
+  expect(within(noDataCard).getByText("No data")).toBeInTheDocument();
+});
+
+test("the sort also orders filtered results", async () => {
+  const user = userEvent.setup();
+  render(<SearchPage players={RISK_PLAYERS} onBack={() => {}} />);
+
+  await user.click(chip("Team", "DAL"));
+  expect(shownNames()).toEqual(["Normal Nate", "Nodata Ned", "Spiking Steve"]);
+
+  await user.click(sortToggle());
+  expect(shownNames()).toEqual(["Spiking Steve", "Normal Nate", "Nodata Ned"]);
+});
+
+test("Reset turns the sort off and puts the direction back to highest first", async () => {
+  const user = userEvent.setup();
+  render(<SearchPage players={RISK_PLAYERS} onBack={() => {}} />);
+
+  await user.click(sortToggle());
+  await user.click(screen.getByRole("button", { name: "Lowest risk first" }));
+  await user.click(screen.getByRole("button", { name: "Reset" }));
+
+  expect(sortToggle()).toHaveAttribute("aria-pressed", "false");
+  expect(screen.queryByRole("group", { name: "Sort order" })).not.toBeInTheDocument();
+  expect(shownNames()).toEqual([]);
+  expect(screen.getByText("Search a name or pick a position/team.")).toBeInTheDocument();
+
+  await user.click(sortToggle());
+  expect(screen.getByRole("button", { name: "Highest risk first" })).toHaveAttribute("aria-pressed", "true");
 });
 
 // ---------- Locked positions ----------

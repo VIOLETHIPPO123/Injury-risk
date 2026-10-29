@@ -11,9 +11,21 @@ export function calculateAcwr(snapsLastGame, snapsLast4Games) {
 // under-training and slightly-elevated share "medium" because the risk
 // doc treats both as cautionary, just from opposite directions.
 export function riskLevel(acwr) {
-  if (acwr === null) return { label: "Not enough data", tier: "unknown" };
+  if (acwr === null) return { label: "No data", tier: "unknown" };
   if (acwr < 0.8) return { label: "Ramping up", tier: "medium" };
   if (acwr <= 1.3) return { label: "Normal workload", tier: "low" };
   if (acwr <= 1.5) return { label: "Slightly elevated", tier: "medium" };
   return { label: "Spiking — high risk", tier: "high" };
+}
+
+const TIER_RANK = { low: 0, medium: 1, high: 2 };
+
+// Higher is riskier; null for "unknown". Used with acwrDistance to break ties within a tier.
+export function tierRank(risk) {
+  return TIER_RANK[risk.tier] ?? null;
+}
+
+// How far a workload is from "business as usual" (1.0), in either direction.
+export function acwrDistance(acwr) {
+  return acwr === null ? null : Math.abs(acwr - 1);
 }
