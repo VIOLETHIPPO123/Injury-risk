@@ -79,15 +79,49 @@ export function rosterLimit(formatId) {
   return format.starters.length + format.bench;
 }
 
+// The bench and IR take any rostered player. The bench holds `format.bench` players and
+// IR holds `format.ir`; every player on either shares the one slot object.
 export const BENCH = { id: "BN", label: "Bench" };
+export const IR = { id: "IR", label: "IR" };
 
-// Gives each player a slot, in the order given: the first open starting slot their position
-// is allowed in, otherwise the bench. Returns a Map of player id -> slot.
-export function assignSlots(formatId, players) {
-  const open = [...ROSTER_FORMATS[formatId].starters];
+export function isStarterSlot(slot) {
+  return slot !== BENCH && slot !== IR;
+}
+
+// Whether `position` may be moved into the slot with this id. IR is limited to
+// `format.ir` players, so `irFull` says whether it already is (by someone else).
+export function canMoveTo(formatId, slotId, position, { irFull = false } = {}) {
+  if (slotId === BENCH.id) return true;
+  if (slotId === IR.id) return !irFull;
+  const slot = ROSTER_FORMATS[formatId].starters.find((s) => s.id === slotId);
+  return Boolean(slot?.allowed.includes(position));
+}
+
+// Gives each player a slot. `assignments` (player id -> slot id) holds the moves the user
+// made; any that still fit the format are kept. Everyone else, in the order given, gets
+// the first open starting slot their position is allowed in, otherwise the bench.
+// Returns a Map of player id -> slot.
+export function assignSlots(formatId, players, assignments = {}) {
+  const format = ROSTER_FORMATS[formatId];
+  const open = [...format.starters];
   const slots = new Map();
+  let irCount = 0;
 
   for (const player of players) {
+    const slotId = assignments[player.id];
+    if (slotId === BENCH.id) {
+      slots.set(player.id, BENCH);
+    } else if (slotId === IR.id && irCount < format.ir) {
+      slots.set(player.id, IR);
+      irCount++;
+    } else {
+      const index = open.findIndex((s) => s.id === slotId && s.allowed.includes(player.position));
+      if (index !== -1) slots.set(player.id, open.splice(index, 1)[0]);
+    }
+  }
+
+  for (const player of players) {
+    if (slots.has(player.id)) continue;
     const index = open.findIndex((s) => s.allowed.includes(player.position));
     slots.set(player.id, index === -1 ? BENCH : open.splice(index, 1)[0]);
   }
