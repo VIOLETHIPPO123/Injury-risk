@@ -1,0 +1,62 @@
+.injury-history {
+  margin-top: 32px;
+}
+
+.injury-history-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-h);
+  }
+}
+
+/* Makes clear the injuries aren't real yet. */
+.injury-history-sample {
+  padding: 2px 8px;
+  border: 1px dashed currentColor;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.injury-history-message,
+.injury-history-summary {
+  margin: 12px 0 0;
+  color: var(--text);
+}
+
+.injury-history-warning {
+  margin-top: 12px;
+  padding: 8px 12px;
+  border-left: 4px solid var(--risk-caution, #b45309);
+  border-radius: 4px;
+  background: var(--accent-bg);
+  color: var(--text-h);
+
+  p {
+    margin: 0;
+  }
+}
+
+.injury-history-table {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  th,
+  td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+
+  th {
+    font-weight: 600;
+    color: var(--text-h);
+  }
+}

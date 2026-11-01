@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Button from "../components/Button";
+import InjuryHistory from "../components/InjuryHistory";
 import RosterLink from "../components/RosterLink";
+import { getInjuries } from "../services/injuryService";
 import { calculateAcwr, riskLevel } from "../utils/acwr";
 import { compareVerdict, comparisonRows } from "../utils/comparison";
 import {
@@ -129,6 +131,29 @@ function PlayerPage({
   backLabel = "Back to team page",
 }) {
   const [compareOpen, setCompareOpen] = useState(false);
+  // Tagged with the player it belongs to, so a previous player's injuries never show.
+  const [injuryHistory, setInjuryHistory] = useState({ playerId: null, injuries: null, error: null });
+  const playerId = player?.id;
+
+  useEffect(() => {
+    if (playerId === undefined) return;
+    // Ignore a response that arrives after the page moved on to another player.
+    let ignore = false;
+
+    getInjuries(playerId)
+      .then((injuries) => {
+        if (!ignore) setInjuryHistory({ playerId, injuries, error: null });
+      })
+      .catch((err) => {
+        if (!ignore) setInjuryHistory({ playerId, injuries: null, error: err.message });
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [playerId]);
+
+  const current = injuryHistory.playerId === playerId;
 
   if (!player) {
     return (
@@ -194,6 +219,11 @@ function PlayerPage({
           <dd>{chronicAvg === null ? "—" : chronicAvg.toFixed(2)}</dd>
         </div>
       </dl>
+
+      <InjuryHistory
+        injuries={current ? injuryHistory.injuries : null}
+        error={current ? injuryHistory.error : null}
+      />
 
       <p className="player-page-note">
         Note: ACWR (Acute:Chronic Workload Ratio) compares the most recent

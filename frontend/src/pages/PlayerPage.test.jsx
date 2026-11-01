@@ -2,6 +2,12 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import PlayerPage from "./PlayerPage";
+import { getInjuries } from "../services/injuryService";
+
+// The player page loads injury history itself; these tests answer with none unless they say otherwise.
+vi.mock("../services/injuryService", () => ({
+  getInjuries: vi.fn(() => Promise.resolve([])),
+}));
 
 const LG = {
   id: 8,
@@ -323,5 +329,25 @@ describe("PlayerPage compare panel with roster slots", () => {
     expect(within(items[1]).getByText("Bench · DAL · WR")).toBeInTheDocument();
     // A WR in a WR slot doesn't repeat the position.
     expect(within(items[2]).getByText("WR · DAL")).toBeInTheDocument();
+  });
+});
+
+describe("PlayerPage injury history", () => {
+  it("loads the shown player's injuries and lists them", async () => {
+    getInjuries.mockResolvedValueOnce([
+      { season: 2025, week: 9, bodyPart: "Hamstring", type: "Strain", gamesMissed: 2, status: "Recovered" },
+      { season: 2023, week: 5, bodyPart: "Hamstring", type: "Strain", gamesMissed: 1, status: "Recovered" },
+    ]);
+
+    render(<PlayerPage player={QB} onBack={vi.fn()} />);
+
+    expect(getInjuries).toHaveBeenCalledWith(QB.id);
+    expect(await screen.findByText("⚠ 2 hamstring injuries in 2 seasons.")).toBeInTheDocument();
+  });
+
+  it("shows No recorded injuries for a player without any", async () => {
+    render(<PlayerPage player={QB} onBack={vi.fn()} />);
+
+    expect(await screen.findByText("No recorded injuries.")).toBeInTheDocument();
   });
 });

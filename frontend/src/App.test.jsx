@@ -49,6 +49,7 @@ beforeEach(() => {
         return jsonResponse(200, { ...existing, ...JSON.parse(options.body) });
       }
       if (id && method === "DELETE") return jsonResponse(204);
+      if (url.endsWith("/injuries")) return jsonResponse(200, []);
       throw new Error(`Unexpected request: ${method} ${url}`);
     }),
   );
