@@ -30,25 +30,25 @@ const QB = {
   snapsLast4Games: 261,
 };
 
-async function openCompare(watchlistedPlayers) {
+async function openCompare(rosteredPlayers) {
   const user = userEvent.setup();
   render(
     <PlayerPage
       player={LG}
-      watchlistedPlayers={watchlistedPlayers}
+      rosteredPlayers={rosteredPlayers}
       onBack={vi.fn()}
     />,
   );
   await user.click(screen.getByRole("button", { name: "Compare" }));
-  return screen.getByRole("complementary", { name: "Compare with watchlist" });
+  return screen.getByRole("complementary", { name: "Compare with my roster" });
 }
 
 describe("PlayerPage compare panel", () => {
   it("is closed until Compare is clicked", () => {
-    render(<PlayerPage player={LG} watchlistedPlayers={[RT]} onBack={vi.fn()} />);
+    render(<PlayerPage player={LG} rosteredPlayers={[RT]} onBack={vi.fn()} />);
 
     expect(
-      screen.queryByRole("complementary", { name: "Compare with watchlist" }),
+      screen.queryByRole("complementary", { name: "Compare with my roster" }),
     ).not.toBeInTheDocument();
   });
 
@@ -60,13 +60,13 @@ describe("PlayerPage compare panel", () => {
     ).toBeInTheDocument();
   });
 
-  it("lists a watchlisted RT on an LG's panel", async () => {
+  it("lists a rostered RT on an LG's panel", async () => {
     const panel = await openCompare([RT]);
 
     expect(within(panel).getByText("Jawaan Taylor")).toBeInTheDocument();
   });
 
-  it("leaves out watchlisted players from other position groups", async () => {
+  it("leaves out rostered players from other position groups", async () => {
     const panel = await openCompare([RT, QB]);
 
     expect(within(panel).queryByText("Lamar Jackson")).not.toBeInTheDocument();
@@ -77,7 +77,7 @@ describe("PlayerPage compare panel", () => {
 
     expect(within(panel).queryByRole("listitem")).not.toBeInTheDocument();
     expect(
-      within(panel).getByText("No other OL players on your watchlist."),
+      within(panel).getByText("No other OL players on your roster."),
     ).toBeInTheDocument();
   });
 
@@ -92,9 +92,9 @@ describe("PlayerPage compare panel", () => {
       snapsLast4Games: 260,
     };
 
-    async function compareWith(name, watchlistedPlayers = [RT, C]) {
+    async function compareWith(name, rosteredPlayers = [RT, C]) {
       const user = userEvent.setup();
-      const panel = await openCompare(watchlistedPlayers);
+      const panel = await openCompare(rosteredPlayers);
       await user.click(
         within(panel).getByRole("button", { name: `Compare with ${name}` }),
       );
@@ -200,12 +200,12 @@ describe("PlayerPage compare panel", () => {
     await user.click(within(panel).getByRole("button", { name: "Close" }));
 
     expect(
-      screen.queryByRole("complementary", { name: "Compare with watchlist" }),
+      screen.queryByRole("complementary", { name: "Compare with my roster" }),
     ).not.toBeInTheDocument();
   });
 });
 
-describe("PlayerPage compare panel with no watchlist candidates", () => {
+describe("PlayerPage compare panel with no roster candidates", () => {
   const C = {
     id: 30,
     name: "Creed Humphrey",
@@ -222,13 +222,13 @@ describe("PlayerPage compare panel with no watchlist candidates", () => {
       <PlayerPage
         player={LG}
         players={ALL_PLAYERS}
-        watchlistedPlayers={[QB]}
+        rosteredPlayers={[QB]}
         onBack={vi.fn()}
       />,
     );
     await user.click(screen.getByRole("button", { name: "Compare" }));
     const panel = screen.getByRole("complementary", {
-      name: "Compare with watchlist",
+      name: "Compare with my roster",
     });
     return { user, panel };
   }
@@ -278,13 +278,13 @@ describe("PlayerPage compare panel with no watchlist candidates", () => {
     expect(within(view).getByText(/^Safer start:/)).toBeInTheDocument();
   });
 
-  it("doesn't show the search when there are watchlist candidates", async () => {
+  it("doesn't show the search when there are roster candidates", async () => {
     const user = userEvent.setup();
     render(
       <PlayerPage
         player={LG}
         players={ALL_PLAYERS}
-        watchlistedPlayers={[RT]}
+        rosteredPlayers={[RT]}
         onBack={vi.fn()}
       />,
     );
@@ -293,5 +293,35 @@ describe("PlayerPage compare panel with no watchlist candidates", () => {
     expect(
       screen.queryByRole("combobox", { name: "Search players by name" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("PlayerPage compare panel with roster slots", () => {
+  const wr = (id, name, slot) => ({
+    id, name, team: "DAL", position: "WR", snapsLastGame: 60, snapsLast4Games: 240, slot,
+  });
+  const LAMB = wr(40, "CeeDee Lamb", { id: "WR1", label: "WR" });
+  const PICKENS = wr(41, "George Pickens", { id: "FLEX", label: "FLEX" });
+  const TOLBERT = wr(42, "Jalen Tolbert", { id: "BN", label: "Bench" });
+  const COOKS = wr(43, "Brandin Cooks", { id: "WR2", label: "WR" });
+
+  it("lists the rostered players in the group with their slots, never the current player", async () => {
+    const user = userEvent.setup();
+    render(
+      <PlayerPage player={LAMB} rosteredPlayers={[LAMB, PICKENS, TOLBERT, COOKS, QB]} onBack={vi.fn()} />,
+    );
+    await user.click(screen.getByRole("button", { name: "Compare" }));
+    const panel = screen.getByRole("complementary", { name: "Compare with my roster" });
+
+    const items = within(panel).getAllByRole("listitem");
+    expect(items.map((item) => item.querySelector(".compare-panel-name").textContent)).toEqual([
+      "George Pickens",
+      "Jalen Tolbert",
+      "Brandin Cooks",
+    ]);
+    expect(within(items[0]).getByText("FLEX · DAL · WR")).toBeInTheDocument();
+    expect(within(items[1]).getByText("Bench · DAL · WR")).toBeInTheDocument();
+    // A WR in a WR slot doesn't repeat the position.
+    expect(within(items[2]).getByText("WR · DAL")).toBeInTheDocument();
   });
 });

@@ -8,22 +8,26 @@ import RostersPage from "./pages/RostersPage";
 import TeamRosterPage from "./pages/TeamRosterPage";
 import SearchPage from "./pages/SearchPage";
 import PlayerPage from "./pages/PlayerPage";
-import WatchlistPage from "./pages/WatchlistPage";
+import MyRosterPage from "./pages/MyRosterPage";
 import AboutPage from "./pages/AboutPage";
 import AcwrInfoPage from "./pages/AcwrInfoPage";
 import { getPlayers } from "./services/playerService";
 import {
-  getWatchlist,
-  addToWatchlist,
-  updateWatchlistEntry,
-  removeFromWatchlist,
-} from "./services/watchlistService";
+  getRoster,
+  addToRoster,
+  updateRosterEntry,
+  removeFromRoster,
+} from "./services/rosterService";
 import { EMPTY_SEARCH } from "./utils/filterPlayers";
+import { assignSlots, DEFAULT_FORMAT, rosterLimit } from "./utils/rosterFormats";
 import "./App.css";
 import Header from "./components/Header";
 
 // Roughly when the header's title animation finishes; the homepage bars start rising then.
 const TITLE_INTRO_MS = 1300;
+
+// The roster format in use. The lineup view (DEV-88) adds a picker to change it.
+const ROSTER_FORMAT = DEFAULT_FORMAT;
 
 function App() {
   const [view, setView] = useState("home");
@@ -37,8 +41,8 @@ function App() {
   const [playerOrigin, setPlayerOrigin] = useState("team-roster");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [watchlist, setWatchlist] = useState([]);
-  const [watchlistError, setWatchlistError] = useState(null);
+  const [roster, setRoster] = useState([]);
+  const [rosterError, setRosterError] = useState(null);
   // Lives here, not in SearchPage, so the query and chips survive leaving the page.
   const [search, setSearch] = useState(EMPTY_SEARCH);
 
@@ -62,16 +66,16 @@ function App() {
     };
   }, []);
 
-  // Loaded separately so a watchlist failure doesn't block the rest of the app.
+  // Loaded separately so a roster failure doesn't block the rest of the app.
   useEffect(() => {
     let ignore = false;
 
-    getWatchlist()
+    getRoster()
       .then((data) => {
-        if (!ignore) setWatchlist(data);
+        if (!ignore) setRoster(data);
       })
       .catch((err) => {
-        if (!ignore) setWatchlistError(err.message);
+        if (!ignore) setRosterError(err.message);
       });
 
     return () => {
@@ -85,37 +89,51 @@ function App() {
     setView("player");
   }
 
-  const watchlistedIds = new Set(watchlist.map((entry) => entry.playerId));
-  const watchlistedPlayers = players.filter((p) => watchlistedIds.has(p.id));
+  // Slots go to players in the order they were added (entry ids are assigned in that order).
+  const limit = rosterLimit(ROSTER_FORMAT);
+  const rosterPlayers = [...roster]
+    .sort((a, b) => a.id - b.id)
+    .map((entry) => players.find((p) => p.id === entry.playerId))
+    .filter(Boolean);
+  const slots = assignSlots(ROSTER_FORMAT, rosterPlayers);
+  const rosteredPlayers = rosterPlayers.map((p) => ({ ...p, slot: slots.get(p.id) }));
 
   // Each handler updates local state from the backend's response instead of re-fetching the list.
-  function handleAddToWatchlist(playerId) {
-    setWatchlistError(null);
-    addToWatchlist(playerId)
-      .then((entry) => setWatchlist((prev) => [...prev, entry]))
-      .catch((err) => setWatchlistError(err.message));
+  function handleAddToRoster(playerId) {
+    setRosterError(null);
+    addToRoster(playerId)
+      .then((entry) => setRoster((prev) => [...prev, entry]))
+      .catch((err) => setRosterError(err.message));
   }
 
   // Resolves to true on success so the edit form knows whether to close.
-  function handleUpdateWatchlistEntry(id, note) {
-    setWatchlistError(null);
-    return updateWatchlistEntry(id, note)
+  function handleUpdateRosterEntry(id, note) {
+    setRosterError(null);
+    return updateRosterEntry(id, note)
       .then((updated) => {
-        setWatchlist((prev) => prev.map((e) => (e.id === id ? updated : e)));
+        setRoster((prev) => prev.map((e) => (e.id === id ? updated : e)));
         return true;
       })
       .catch((err) => {
-        setWatchlistError(err.message);
+        setRosterError(err.message);
         return false;
       });
   }
 
-  function handleRemoveFromWatchlist(id) {
-    setWatchlistError(null);
-    removeFromWatchlist(id)
-      .then(() => setWatchlist((prev) => prev.filter((e) => e.id !== id)))
-      .catch((err) => setWatchlistError(err.message));
+  function handleRemoveFromRoster(id) {
+    setRosterError(null);
+    removeFromRoster(id)
+      .then(() => setRoster((prev) => prev.filter((e) => e.id !== id)))
+      .catch((err) => setRosterError(err.message));
   }
+
+  // What the player cards need to show the badge or the add button.
+  const rosterControls = {
+    ids: new Set(roster.map((entry) => entry.playerId)),
+    isFull: roster.length >= limit,
+    limit,
+    onAdd: handleAddToRoster,
+  };
 
   let content;
   if (loading) {
@@ -140,8 +158,7 @@ function App() {
         players={players}
         onBack={() => setView("rosters")}
         onPlayerClick={(player) => openPlayer(player, "team-roster")}
-        watchlistedIds={watchlistedIds}
-        onAddToWatchlist={handleAddToWatchlist}
+        roster={rosterControls}
       />
     );
   } else if (view === "search") {
@@ -152,18 +169,19 @@ function App() {
         onSearchChange={setSearch}
         onSelectPlayer={(player) => openPlayer(player, "search")}
         onBack={() => setView("home")}
-        watchlistedIds={watchlistedIds}
-        onAddToWatchlist={handleAddToWatchlist}
+        roster={rosterControls}
       />
     );
-  } else if (view === "watchlist") {
+  } else if (view === "my-roster") {
     content = (
-      <WatchlistPage
-        entries={watchlist}
+      <MyRosterPage
+        entries={roster}
         players={players}
+        slots={slots}
+        limit={limit}
         onBack={() => setView("home")}
-        onUpdate={handleUpdateWatchlistEntry}
-        onRemove={handleRemoveFromWatchlist}
+        onUpdate={handleUpdateRosterEntry}
+        onRemove={handleRemoveFromRoster}
       />
     );
   } else if (view === "player") {
@@ -171,7 +189,7 @@ function App() {
       <PlayerPage
         player={selectedPlayer}
         players={players}
-        watchlistedPlayers={watchlistedPlayers}
+        rosteredPlayers={rosteredPlayers}
         onBack={() => setView(playerOrigin)}
         backLabel={playerOrigin === "search" ? "Back to search" : "Back to team page"}
       />
@@ -196,7 +214,7 @@ function App() {
             items={[
               { label: "Roster", onClick: () => setView("rosters") },
               { label: "Search", onClick: () => setView("search") },
-              { label: "Watchlist", onClick: () => setView("watchlist") },
+              { label: "My Roster", onClick: () => setView("my-roster") },
               { label: "About", onClick: () => setView("about") },
             ]}
           />
@@ -218,10 +236,10 @@ function App() {
               onClick: () => setView("search"),
             },
             {
-              id: "watchlist",
-              label: "Watchlist",
-              detail: `On your list: ${watchlist.length}`,
-              onClick: () => setView("watchlist"),
+              id: "my-roster",
+              label: "My Roster",
+              detail: `On your roster: ${roster.length} / ${limit}`,
+              onClick: () => setView("my-roster"),
             },
             {
               id: "about",
@@ -238,9 +256,9 @@ function App() {
   return (
     <main className="app">
       <Header />
-      {watchlistError && (
-        <p className="watchlist-error" role="alert">
-          Watchlist error: {watchlistError}
+      {rosterError && (
+        <p className="roster-error" role="alert">
+          Roster error: {rosterError}
         </p>
       )}
       {content}

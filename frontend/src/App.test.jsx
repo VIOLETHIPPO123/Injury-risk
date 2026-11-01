@@ -27,10 +27,10 @@ function jsonResponse(status, body) {
   });
 }
 
-// What GET /watchlist returns when the app loads. Tests that start with entries overwrite it.
+// What the roster endpoint (GET /watchlist on the backend) returns when the app loads. Tests that start with entries overwrite it.
 let savedEntries = [];
 
-// A fake backend for the watchlist CRUD endpoints. Players come from the mocked playerService above.
+// A fake backend for the roster CRUD endpoints. Players come from the mocked playerService above.
 beforeEach(() => {
   savedEntries = [];
   vi.stubGlobal(
@@ -54,15 +54,15 @@ beforeEach(() => {
   );
 });
 
-function watchlistGetCalls() {
+function rosterGetCalls() {
   return fetch.mock.calls.filter(
     ([url, opts]) => url.endsWith("/watchlist") && opts?.method === "GET",
   );
 }
 
-async function openWatchlistPage() {
+async function openMyRosterPage() {
   fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
-  fireEvent.click(screen.getByRole("menuitem", { name: "Watchlist" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "My Roster" }));
 }
 
 // Types a query into the search box and presses Enter to fill the results grid.
@@ -128,14 +128,14 @@ describe("homepage animation", () => {
     await renderHome(PLAYERS);
 
     expect(screen.getByTestId("home-backdrop")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Roster/ })).toHaveTextContent(
+    expect(screen.getByRole("button", { name: /^Roster/ })).toHaveTextContent(
       "Browse all 1 teams",
     );
     expect(screen.getByRole("button", { name: /Search/ })).toHaveTextContent(
       "Find any of 1 players",
     );
     expect(
-      await screen.findByRole("button", { name: /On your list: 1/ }),
+      await screen.findByRole("button", { name: /On your roster: 1 \/ 16/ }),
     ).toBeInTheDocument();
   });
 
@@ -143,9 +143,9 @@ describe("homepage animation", () => {
     const user = userEvent.setup();
     await renderHome();
 
-    await user.click(screen.getByRole("button", { name: /Watchlist/ }));
+    await user.click(screen.getByRole("button", { name: /My Roster/ }));
 
-    expect(screen.getByRole("heading", { name: "Watchlist" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "My Roster" })).toBeInTheDocument();
     expect(screen.queryByTestId("home-backdrop")).not.toBeInTheDocument();
   });
 
@@ -176,7 +176,7 @@ describe("homepage navigation", () => {
   it.each([
     ["Roster", "Rosters"],
     ["Search", "Search Players"],
-    ["Watchlist", "Watchlist"],
+    ["My Roster", "My Roster"],
     ["About", "About Sidelined"],
   ])(
     "renders a %s item in the nav menu that navigates to the %s page",
@@ -219,7 +219,7 @@ describe("homepage navigation", () => {
   });
 });
 
-test("Add to Watchlist submits the expected payload and the player shows up on the watchlist page", async () => {
+test("Add to roster submits the expected payload and the player shows up on My Roster", async () => {
   // Arrange
   await renderHome(PLAYERS);
   fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
@@ -227,7 +227,7 @@ test("Add to Watchlist submits the expected payload and the player shows up on t
   submitSearch("brissett");
 
   // Act
-  fireEvent.click(screen.getByText("Add to Watchlist"));
+  fireEvent.click(screen.getByText("Add to roster"));
 
   // Assert — the request sent to the backend
   const postCall = fetch.mock.calls.find(([, opts]) => opts?.method === "POST");
@@ -236,20 +236,21 @@ test("Add to Watchlist submits the expected payload and the player shows up on t
   expect(JSON.parse(postCall[1].body)).toEqual({ playerId: 7, note: "" });
 
   // Assert — the UI reflects the new entry
-  expect(await screen.findByText("On watchlist")).toBeDisabled();
+  expect(await screen.findByText("On my roster")).toBeInTheDocument();
+  expect(screen.queryByText("Add to roster")).not.toBeInTheDocument();
   fireEvent.click(screen.getByText("← Back to home"));
-  await openWatchlistPage();
+  await openMyRosterPage();
   expect(screen.getByText("Jacoby Brissett")).toBeInTheDocument();
   // The new entry came from the POST response; the list was never reloaded.
-  expect(watchlistGetCalls()).toHaveLength(1);
+  expect(rosterGetCalls()).toHaveLength(1);
 });
 
-describe("watchlist updates without a page refresh", () => {
+describe("roster updates without a page refresh", () => {
   test("editing a note shows the new note right away", async () => {
     // Arrange
     savedEntries = [{ id: 1, playerId: 7, note: "Monitor snaps" }];
     await renderHome(PLAYERS);
-    await openWatchlistPage();
+    await openMyRosterPage();
     expect(await screen.findByText("Monitor snaps")).toBeInTheDocument();
 
     // Act
@@ -263,32 +264,32 @@ describe("watchlist updates without a page refresh", () => {
     expect(await screen.findByText("Edit")).toBeInTheDocument();
     expect(screen.getByText("Snap share dropping")).toBeInTheDocument();
     expect(screen.queryByText("Monitor snaps")).not.toBeInTheDocument();
-    expect(watchlistGetCalls()).toHaveLength(1);
+    expect(rosterGetCalls()).toHaveLength(1);
   });
 
   test("removing an entry takes it off the list right away", async () => {
     // Arrange
     savedEntries = [{ id: 1, playerId: 7, note: "Monitor snaps" }];
     await renderHome(PLAYERS);
-    await openWatchlistPage();
+    await openMyRosterPage();
     expect(await screen.findByText("Jacoby Brissett")).toBeInTheDocument();
 
     // Act
     fireEvent.click(screen.getByText("Remove"));
 
     // Assert
-    expect(await screen.findByText(/Your watchlist is empty/)).toBeInTheDocument();
+    expect(await screen.findByText(/Your roster is empty/)).toBeInTheDocument();
     expect(screen.queryByText("Jacoby Brissett")).not.toBeInTheDocument();
-    expect(watchlistGetCalls()).toHaveLength(1);
+    expect(rosterGetCalls()).toHaveLength(1);
   });
 
-  test("removing an entry re-enables Add to Watchlist for that player", async () => {
+  test("removing an entry brings back Add to roster for that player", async () => {
     // Arrange
     savedEntries = [{ id: 1, playerId: 7, note: "" }];
     await renderHome(PLAYERS);
-    await openWatchlistPage();
+    await openMyRosterPage();
     fireEvent.click(await screen.findByText("Remove"));
-    await screen.findByText(/Your watchlist is empty/);
+    await screen.findByText(/Your roster is empty/);
 
     // Act
     fireEvent.click(screen.getByText("← Back to home"));
@@ -297,7 +298,7 @@ describe("watchlist updates without a page refresh", () => {
     submitSearch("brissett");
 
     // Assert
-    expect(screen.getByText("Add to Watchlist")).toBeEnabled();
+    expect(screen.getByText("Add to roster")).toBeEnabled();
   });
 });
 
@@ -425,5 +426,44 @@ describe("opening a player and going back", () => {
     await user.click(screen.getByRole("button", { name: "Back to search" }));
 
     expect(screen.getByRole("heading", { name: "Search Players" })).toBeInTheDocument();
+  });
+});
+
+describe("roster limits and errors", () => {
+  async function searchForBrissett() {
+    fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Search" }));
+    submitSearch("brissett");
+  }
+
+  test("with 16 players rostered, Add to roster is disabled and reads Roster full (16)", async () => {
+    // Arrange — a full Standard roster of other players.
+    savedEntries = Array.from({ length: 16 }, (_, i) => ({ id: i + 1, playerId: 100 + i, note: "" }));
+    await renderHome(PLAYERS);
+    await screen.findByRole("button", { name: /On your roster: 16 \/ 16/ });
+
+    // Act
+    await searchForBrissett();
+
+    // Assert
+    expect(screen.getByRole("button", { name: "Roster full (16)" })).toBeDisabled();
+  });
+
+  test("a failed add shows the backend's error in the error banner", async () => {
+    // Arrange
+    await renderHome(PLAYERS);
+    fetch.mockImplementationOnce(() =>
+      Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) }),
+    );
+    await searchForBrissett();
+
+    // Act
+    fireEvent.click(screen.getByText("Add to roster"));
+
+    // Assert
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Roster error: POST /watchlist failed with status 404",
+    );
+    expect(screen.getByText("Add to roster")).toBeEnabled();
   });
 });

@@ -1,6 +1,9 @@
 import "./PlayerCard.css";
 import { calculateAcwr, riskLevel } from "../utils/acwr";
+import { isRosterEligible } from "../utils/rosterFormats";
 
+// `roster` ({ ids, isFull, limit, onAdd }) turns on the roster controls: an "On my roster"
+// badge for rostered players, otherwise an add button for players in eligible positions.
 function PlayerCard({
   id,
   name,
@@ -9,11 +12,12 @@ function PlayerCard({
   snapsLastGame,
   snapsLast4Games,
   onClick,
-  onAddToWatchlist,
-  isWatchlisted = false,
+  roster,
 }) {
   const acwr = calculateAcwr(snapsLastGame, snapsLast4Games);
   const risk = riskLevel(acwr);
+  const isRostered = roster?.ids.has(id) ?? false;
+  const canAdd = roster && !isRostered && isRosterEligible(position);
 
   return (
     <article
@@ -54,19 +58,20 @@ function PlayerCard({
         </div>
       </dl>
 
-      {onAddToWatchlist && (
+      {isRostered && <span className="roster-badge">On my roster</span>}
+      {canAdd && (
         <button
           type="button"
-          className="watchlist-add"
-          disabled={isWatchlisted}
+          className="roster-add"
+          disabled={roster.isFull}
           // The card itself is clickable, so keep this button's events from opening the player.
           onClick={(e) => {
             e.stopPropagation();
-            onAddToWatchlist(id);
+            roster.onAdd(id);
           }}
           onKeyDown={(e) => e.stopPropagation()}
         >
-          {isWatchlisted ? "On watchlist" : "Add to Watchlist"}
+          {roster.isFull ? `Roster full (${roster.limit})` : "Add to roster"}
         </button>
       )}
     </article>

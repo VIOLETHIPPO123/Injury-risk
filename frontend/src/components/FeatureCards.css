@@ -46,7 +46,7 @@
   --card-color: #2563eb;
 }
 
-.feature-card-watchlist {
+.feature-card-my-roster {
   --card-color: #0d9488;
 }
 
@@ -59,7 +59,7 @@
     --card-color: #60a5fa;
   }
 
-  .feature-card-watchlist {
+  .feature-card-my-roster {
     --card-color: #2dd4bf;
   }
 
