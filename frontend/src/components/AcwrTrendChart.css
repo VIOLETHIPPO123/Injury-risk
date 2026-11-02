@@ -1,0 +1,147 @@
+/* Same risk colors as the player cards. */
+.acwr-trend {
+  --risk-safe: #15803d;
+  --risk-caution: #b45309;
+  --risk-high: #b91c1c;
+
+  margin-top: 32px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .acwr-trend {
+    --risk-safe: #4ade80;
+    --risk-caution: #fbbf24;
+    --risk-high: #f87171;
+  }
+}
+
+.acwr-trend-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  h2 {
+    margin: 0;
+    font-size: 18px;
+    color: var(--text-h);
+  }
+}
+
+/* Makes clear the workload history isn't real yet. Matches the injury history's label. */
+.acwr-trend-sample {
+  padding: 2px 8px;
+  border: 1px dashed currentColor;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.acwr-trend-message,
+.acwr-trend-summary {
+  margin: 12px 0 0;
+  color: var(--text);
+}
+
+.acwr-trend-word {
+  color: var(--text-h);
+}
+
+.acwr-trend-chart {
+  position: relative;
+  margin-top: 12px;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+}
+
+.acwr-trend-band {
+  rect {
+    opacity: 0.12;
+  }
+
+  text {
+    font-size: 12px;
+    fill: var(--text);
+  }
+
+  &.risk-low rect {
+    fill: var(--risk-safe);
+  }
+
+  &.risk-medium rect {
+    fill: var(--risk-caution);
+  }
+
+  &.risk-high rect {
+    fill: var(--risk-high);
+  }
+}
+
+.acwr-trend-axis {
+  text {
+    font-size: 12px;
+    fill: var(--text);
+  }
+}
+
+/* 1.0: "business as usual". */
+.acwr-trend-baseline {
+  stroke: var(--border);
+  stroke-dasharray: 4 4;
+}
+
+.acwr-trend-line {
+  fill: none;
+  stroke: var(--text-h);
+  stroke-width: 2;
+}
+
+.acwr-trend-point {
+  stroke: var(--bg);
+  stroke-width: 2;
+  cursor: pointer;
+
+  &.risk-low {
+    fill: var(--risk-safe);
+  }
+
+  &.risk-medium {
+    fill: var(--risk-caution);
+  }
+
+  &.risk-high {
+    fill: var(--risk-high);
+  }
+
+  &:focus-visible {
+    outline: none;
+    stroke: var(--accent);
+    stroke-width: 3;
+  }
+}
+
+/* Sits above the point it describes. */
+.acwr-trend-tooltip {
+  position: absolute;
+  transform: translate(var(--shift, -50%), calc(-100% - 12px));
+  display: flex;
+  flex-direction: column;
+  padding: 6px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: nowrap;
+  pointer-events: none;
+  color: var(--text);
+
+  strong {
+    color: var(--text-h);
+  }
+}

@@ -3,10 +3,15 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import PlayerPage from "./PlayerPage";
 import { getInjuries } from "../services/injuryService";
+import { getWorkload } from "../services/workloadService";
 
-// The player page loads injury history itself; these tests answer with none unless they say otherwise.
+// The player page loads injury and workload history itself; these tests answer with none
+// unless they say otherwise.
 vi.mock("../services/injuryService", () => ({
   getInjuries: vi.fn(() => Promise.resolve([])),
+}));
+vi.mock("../services/workloadService", () => ({
+  getWorkload: vi.fn(() => Promise.resolve([])),
 }));
 
 const LG = {
@@ -349,5 +354,25 @@ describe("PlayerPage injury history", () => {
     render(<PlayerPage player={QB} onBack={vi.fn()} />);
 
     expect(await screen.findByText("No recorded injuries.")).toBeInTheDocument();
+  });
+});
+
+describe("PlayerPage ACWR trend", () => {
+  it("loads the shown player's workload and charts it", async () => {
+    // Weeks 1 to 5, steady 50 snaps: one ACWR value per week from week 4.
+    getWorkload.mockResolvedValueOnce(
+      [1, 2, 3, 4, 5].map((week) => ({ playerId: QB.id, week, snaps: 50 })),
+    );
+
+    render(<PlayerPage player={QB} onBack={vi.fn()} />);
+
+    expect(getWorkload).toHaveBeenCalledWith(QB.id);
+    expect(await screen.findByRole("img", { name: "Week 5: 50 snaps, ACWR 1.00" })).toBeInTheDocument();
+  });
+
+  it("shows No trend data yet for a player with no history", async () => {
+    render(<PlayerPage player={QB} onBack={vi.fn()} />);
+
+    expect(await screen.findByText("No trend data yet.")).toBeInTheDocument();
   });
 });

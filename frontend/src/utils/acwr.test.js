@@ -1,9 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { calculateAcwr, weeklyAcwr } from "./acwr";
 
-// Builds a history from snaps per week, oldest first; null is a bye week.
+// Builds games the way GET /players/{id}/workload sends them, from snaps per week starting
+// at week 1. null is a bye week, which has no entry.
 const history = (snapsPerWeek) =>
-  snapsPerWeek.map((snaps, i) => ({ week: i + 1, snaps }));
+  snapsPerWeek
+    .map((snaps, i) => ({ playerId: 1, week: i + 1, snaps }))
+    .filter((game) => game.snaps !== null);
 
 const acwrs = (weeks) => weeks.map((w) => w.acwr);
 
@@ -50,11 +53,18 @@ describe("weeklyAcwr", () => {
   });
 
   it("ends on the same ACWR the player page shows", () => {
-    // Jacoby Brissett's history from GET /players/1/workload (bye in week 5). The player
+    // Jacoby Brissett's games from GET /players/1/workload (bye in week 5). The player
     // page scores him from his stored snaps: 68 last game, 253 over the last four.
-    const weeks = weeklyAcwr(history([60, 63, 66, 62, null, 62, 61, 68]));
+    const weeks = weeklyAcwr(history([65, 57, 61, 62, null, 62, 61, 68]));
 
     expect(weeks.at(-1).acwr).toBe(calculateAcwr(68, 253));
+  });
+
+  it("fills in a bye in week 1 as a gap too", () => {
+    expect(weeklyAcwr(history([null, 50]))).toEqual([
+      { week: 1, snaps: null, acwr: null },
+      { week: 2, snaps: 50, acwr: null },
+    ]);
   });
 
   it("returns nothing for an empty history", () => {
