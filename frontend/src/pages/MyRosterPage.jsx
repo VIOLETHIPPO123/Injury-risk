@@ -2,13 +2,7 @@ import { useState } from "react";
 import RosterLink from "../components/RosterLink";
 import { calculateAcwr, riskLevel } from "../utils/acwr";
 import { benchSuggestions } from "../utils/lineupSuggestions";
-import {
-  BENCH,
-  canMoveTo,
-  DEFAULT_FORMAT,
-  IR,
-  ROSTER_FORMATS,
-} from "../utils/rosterFormats";
+import { BENCH, canMoveTo, DEFAULT_FORMAT, IR } from "../utils/rosterFormats";
 import "./MyRosterPage.css";
 
 // `moveOptions` lists every slot this player could be moved to, each with `disabled` set
@@ -110,11 +104,13 @@ function LineupRow({ label, row, renderItem }) {
   );
 }
 
-// The lineup for the chosen format: starting slots, then bench and IR. `slots` maps each
+// The lineup for the chosen format: starting slots, then bench and IR. `formats` are the
+// lineup formats (from toLineupFormat) and `formatId` the chosen one's id. `slots` maps each
 // player id to the slot they fill (from assignSlots); `limit` is the format's roster size.
 function MyRosterPage({
   entries,
   players,
+  formats = [],
   formatId = DEFAULT_FORMAT,
   slots = new Map(),
   limit,
@@ -126,7 +122,18 @@ function MyRosterPage({
 }) {
   // The format the user picked, waiting for them to confirm the move to the bench.
   const [pendingFormat, setPendingFormat] = useState(null);
-  const format = ROSTER_FORMATS[formatId];
+  const format = formats.find((f) => f.id === formatId);
+
+  // The formats come from the backend; there's no lineup to draw until they arrive.
+  if (!format) {
+    return (
+      <section className="my-roster-page">
+        <RosterLink onClick={onBack}>← Back to home</RosterLink>
+        <h1>My Roster</h1>
+        <p>Loading roster formats…</p>
+      </section>
+    );
+  }
 
   const rows = entries
     .map((entry) => ({
@@ -147,13 +154,13 @@ function MyRosterPage({
       return {
         id: s.id,
         label: `${s.label} — ${occupant ? occupant.player.name : "open"}`,
-        disabled: !canMoveTo(formatId, s.id, row.player.position),
+        disabled: !canMoveTo(format, s.id, row.player.position),
       };
     });
     const options = [
       ...starterOptions,
       { id: BENCH.id, label: BENCH.label, disabled: false },
-      { id: IR.id, label: IR.label, disabled: !canMoveTo(formatId, IR.id, row.player.position, { irFull }) },
+      { id: IR.id, label: IR.label, disabled: !canMoveTo(format, IR.id, row.player.position, { irFull }) },
     ];
     // The slots they can move to first, then the greyed-out ones, each group in slot order.
     return [...options.filter((o) => !o.disabled), ...options.filter((o) => o.disabled)];
@@ -196,8 +203,8 @@ function MyRosterPage({
           value={formatId}
           onChange={(e) => setPendingFormat(e.target.value)}
         >
-          {Object.entries(ROSTER_FORMATS).map(([id, f]) => (
-            <option key={id} value={id}>
+          {formats.map((f) => (
+            <option key={f.id} value={f.id}>
               {f.label}
             </option>
           ))}
@@ -207,7 +214,7 @@ function MyRosterPage({
       {pendingFormat && (
         <div className="lineup-confirm" role="alertdialog" aria-label="Change format">
           <p>
-            Switching to {ROSTER_FORMATS[pendingFormat].label} moves every player to the
+            Switching to {formats.find((f) => f.id === pendingFormat).label} moves every player to the
             bench.
           </p>
           <div className="my-roster-item-actions">

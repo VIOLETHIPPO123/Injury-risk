@@ -2,8 +2,11 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 import {
   addToRoster,
   getRoster,
+  getRosterFormats,
+  getRosterSettings,
   removeFromRoster,
   updateRosterEntry,
+  updateRosterSettings,
 } from "./rosterService";
 
 // Stands in for the backend: each test says what the "server" answers.
@@ -105,4 +108,43 @@ test("a failed request throws with the method, path and status", async () => {
   await expect(addToRoster(9999)).rejects.toThrow(
     "POST /watchlist failed with status 404",
   );
+});
+
+test("getRosterFormats GETs /roster/formats", async () => {
+  // Arrange
+  const formats = [{ id: "espn-standard", name: "ESPN Standard" }];
+  mockFetchResponse(200, formats);
+
+  // Act
+  const result = await getRosterFormats();
+
+  // Assert
+  expect(fetch).toHaveBeenCalledWith("http://localhost:8080/roster/formats", { method: "GET" });
+  expect(result).toEqual(formats);
+});
+
+test("getRosterSettings GETs /roster/settings", async () => {
+  // Arrange
+  mockFetchResponse(200, { formatId: "espn-standard" });
+
+  // Act
+  const result = await getRosterSettings();
+
+  // Assert
+  expect(fetch).toHaveBeenCalledWith("http://localhost:8080/roster/settings", { method: "GET" });
+  expect(result).toEqual({ formatId: "espn-standard" });
+});
+
+test("updateRosterSettings PUTs { formatId } to /roster/settings", async () => {
+  // Arrange
+  mockFetchResponse(200, { formatId: "sleeper-default" });
+
+  // Act
+  await updateRosterSettings("sleeper-default");
+
+  // Assert
+  const [url, options] = fetch.mock.calls[0];
+  expect(url).toBe("http://localhost:8080/roster/settings");
+  expect(options.method).toBe("PUT");
+  expect(JSON.parse(options.body)).toEqual({ formatId: "sleeper-default" });
 });

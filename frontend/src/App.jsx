@@ -17,9 +17,18 @@ import {
   addToRoster,
   updateRosterEntry,
   removeFromRoster,
+  getRosterFormats,
+  getRosterSettings,
+  updateRosterSettings,
 } from "./services/rosterService";
 import { EMPTY_SEARCH } from "./utils/filterPlayers";
-import { assignSlots, BENCH, DEFAULT_FORMAT, rosterLimit } from "./utils/rosterFormats";
+import {
+  assignSlots,
+  BENCH,
+  DEFAULT_FORMAT,
+  rosterLimit,
+  toLineupFormat,
+} from "./utils/rosterFormats";
 import "./App.css";
 import Header from "./components/Header";
 
@@ -40,6 +49,8 @@ function App() {
   const [error, setError] = useState(null);
   const [roster, setRoster] = useState([]);
   const [rosterError, setRosterError] = useState(null);
+  // Every format the league can pick (from the backend), and the id of the one it has.
+  const [rosterFormats, setRosterFormats] = useState([]);
   const [rosterFormat, setRosterFormat] = useState(DEFAULT_FORMAT);
   // The lineup moves the user has made: player id -> slot id. Players without one are
   // placed automatically (see assignSlots).
@@ -84,19 +95,39 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    let ignore = false;
+
+    Promise.all([getRosterFormats(), getRosterSettings()])
+      .then(([formats, settings]) => {
+        if (ignore) return;
+        setRosterFormats(formats.map(toLineupFormat));
+        setRosterFormat(settings.formatId);
+      })
+      .catch((err) => {
+        if (!ignore) setRosterError(err.message);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   function openPlayer(player, origin) {
     setSelectedPlayer(player);
     setPlayerOrigin(origin);
     setView("player");
   }
 
+  // Until the formats load there's no lineup, so no limit and no slots.
+  const format = rosterFormats.find((f) => f.id === rosterFormat);
+  const limit = format ? rosterLimit(format) : undefined;
   // Slots go to players in the order they were added (entry ids are assigned in that order).
-  const limit = rosterLimit(rosterFormat);
   const rosterPlayers = [...roster]
     .sort((a, b) => a.id - b.id)
     .map((entry) => players.find((p) => p.id === entry.playerId))
     .filter(Boolean);
-  const slots = assignSlots(rosterFormat, rosterPlayers, assignments);
+  const slots = format ? assignSlots(format, rosterPlayers, assignments) : new Map();
   const rosteredPlayers = rosterPlayers.map((p) => ({ ...p, slot: slots.get(p.id) }));
 
   // Pins everyone to their current slot before applying the move, so benching one RB
@@ -112,9 +143,15 @@ function App() {
     setAssignments(next);
   }
 
+  // Saved to the backend first; the lineup only changes once the league's format has.
   function handleFormatChange(formatId) {
-    setRosterFormat(formatId);
-    setAssignments(Object.fromEntries(rosterPlayers.map((p) => [p.id, BENCH.id])));
+    setRosterError(null);
+    updateRosterSettings(formatId)
+      .then((settings) => {
+        setRosterFormat(settings.formatId);
+        setAssignments(Object.fromEntries(rosterPlayers.map((p) => [p.id, BENCH.id])));
+      })
+      .catch((err) => setRosterError(err.message));
   }
 
   // Each handler updates local state from the backend's response instead of re-fetching the list.
@@ -154,7 +191,7 @@ function App() {
   // What the player cards need to show the badge or the add button.
   const rosterControls = {
     ids: new Set(roster.map((entry) => entry.playerId)),
-    isFull: roster.length >= limit,
+    isFull: limit !== undefined && roster.length >= limit,
     limit,
     onAdd: handleAddToRoster,
   };
@@ -201,6 +238,7 @@ function App() {
       <MyRosterPage
         entries={roster}
         players={players}
+        formats={rosterFormats}
         formatId={rosterFormat}
         slots={slots}
         limit={limit}
@@ -265,7 +303,7 @@ function App() {
             {
               id: "my-roster",
               label: "My Roster",
-              detail: `On your roster: ${roster.length} / ${limit}`,
+              detail: `On your roster: ${roster.length}${limit === undefined ? "" : ` / ${limit}`}`,
               onClick: () => setView("my-roster"),
             },
             {

@@ -36,3 +36,18 @@ export function updateRosterEntry(id, note) {
 export function removeFromRoster(id) {
   return request("DELETE", `${ROSTER_PATH}/${id}`);
 }
+
+// Fetches every roster format the league can pick.
+export function getRosterFormats() {
+  return request("GET", "/roster/formats");
+}
+
+// Fetches the league's settings: { formatId }.
+export function getRosterSettings() {
+  return request("GET", "/roster/settings");
+}
+
+// Saves the league's format. The backend rejects an unknown one with a 400.
+export function updateRosterSettings(formatId) {
+  return request("PUT", "/roster/settings", { formatId });
+}
