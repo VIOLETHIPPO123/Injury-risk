@@ -1,12 +1,16 @@
 package com.sidelined.backend.controller;
 
+import com.sidelined.backend.model.RosterEntry;
+import com.sidelined.backend.repository.InMemoryRosterEntryRepository;
 import com.sidelined.backend.repository.InMemoryRosterFormatRepository;
 import com.sidelined.backend.repository.InMemoryRosterSettingsRepository;
 import com.sidelined.backend.service.RosterService;
+import com.sidelined.backend.validation.RosterFitsFormatValidator;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -14,9 +18,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 // The JSON the front end reads. The format counts themselves are tested in InMemoryRosterFormatRepositoryTest.
 class RosterControllerTest {
 
+    private final InMemoryRosterEntryRepository rosterEntryRepository = new InMemoryRosterEntryRepository();
     private final MockMvc mvc = MockMvcBuilders
         .standaloneSetup(new RosterController(new RosterService(
-            new InMemoryRosterFormatRepository(), new InMemoryRosterSettingsRepository())))
+            new InMemoryRosterFormatRepository(), new InMemoryRosterSettingsRepository(),
+            rosterEntryRepository, List.of(new RosterFitsFormatValidator(rosterEntryRepository)))))
         .setControllerAdvice(new ApiExceptionHandler())
         .build();
 
@@ -68,5 +74,19 @@ class RosterControllerTest {
         mvc.perform(put("/roster/settings").contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
             .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void putFormatTooSmallForTheRoster_returns409() throws Exception {
+        for (long id = 100; id < 116; id++) {
+            rosterEntryRepository.save(new RosterEntry(null, id, RosterEntry.BENCH, ""));
+        } // 16 players; Sleeper Default holds 15
+
+        mvc.perform(put("/roster/settings").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"formatId\":\"sleeper-default\"}"))
+            .andExpect(status().isConflict());
+
+        mvc.perform(get("/roster/settings"))
+            .andExpect(jsonPath("$.formatId").value("espn-standard"));
     }
 }

@@ -13,14 +13,17 @@ const PLAYER_POSITIONS = {
   DEF: ["D/ST"],
 };
 
-const slot = (id, label, allowed) => ({ id, label, allowed });
+// `slot` is the backend's name for where the player is (a RosterEntry's slot): both RB
+// spots are slot "RB".
+const spot = (id, slot, label, allowed) => ({ id, slot, label, allowed });
 
 // A slot with a count of 2 becomes two spots, e.g. RB1 and RB2; a count of 1 keeps its name.
 export function toLineupFormat(format) {
   const starters = format.slots.flatMap((s) =>
     Array.from({ length: s.count }, (_, i) =>
-      slot(
+      spot(
         s.count > 1 ? `${s.name}${i + 1}` : s.name,
+        s.name,
         s.name,
         s.positions.flatMap((p) => PLAYER_POSITIONS[p] ?? []),
       ),
@@ -55,8 +58,8 @@ export function rosterLimit(format) {
 
 // The bench and IR take any rostered player. The bench holds `format.bench` players and
 // IR holds `format.ir`; every player on either shares the one slot object.
-export const BENCH = { id: "BN", label: "Bench" };
-export const IR = { id: "IR", label: "IR" };
+export const BENCH = spot("BN", "BENCH", "Bench");
+export const IR = spot("IR", "IR", "IR");
 
 export function isStarterSlot(slot) {
   return slot !== BENCH && slot !== IR;
@@ -71,32 +74,21 @@ export function canMoveTo(format, slotId, position, { irFull = false } = {}) {
   return Boolean(slot?.allowed.includes(position));
 }
 
-// Gives each player a slot. `assignments` (player id -> slot id) holds the moves the user
-// made; any that still fit the format are kept. Everyone else, in the order given, gets
-// the first open starting slot their position is allowed in, otherwise the bench.
-// Returns a Map of player id -> slot.
-export function assignSlots(format, players, assignments = {}) {
+// Puts each player where the backend has them. `entries` are roster entries
+// ({ playerId, slot }) in the order they were added; players sharing a slot fill its
+// spots in that order (the first RB gets RB1). Returns a Map of player id -> spot.
+export function placeEntries(format, entries) {
   const open = [...format.starters];
-  const slots = new Map();
-  let irCount = 0;
+  const spots = new Map();
 
-  for (const player of players) {
-    const slotId = assignments[player.id];
-    if (slotId === BENCH.id) {
-      slots.set(player.id, BENCH);
-    } else if (slotId === IR.id && irCount < format.ir) {
-      slots.set(player.id, IR);
-      irCount++;
+  for (const entry of entries) {
+    if (entry.slot === IR.slot) {
+      spots.set(entry.playerId, IR);
     } else {
-      const index = open.findIndex((s) => s.id === slotId && s.allowed.includes(player.position));
-      if (index !== -1) slots.set(player.id, open.splice(index, 1)[0]);
+      // A slot this format doesn't have (or no slot yet) means the bench.
+      const index = open.findIndex((s) => s.slot === entry.slot);
+      spots.set(entry.playerId, index === -1 ? BENCH : open.splice(index, 1)[0]);
     }
   }
-
-  for (const player of players) {
-    if (slots.has(player.id)) continue;
-    const index = open.findIndex((s) => s.allowed.includes(player.position));
-    slots.set(player.id, index === -1 ? BENCH : open.splice(index, 1)[0]);
-  }
-  return slots;
+  return spots;
 }

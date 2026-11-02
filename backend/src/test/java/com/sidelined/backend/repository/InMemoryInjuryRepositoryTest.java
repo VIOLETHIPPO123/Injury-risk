@@ -10,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class InMemoryInjuryRepositoryTest {
 
     // Every player id that has sample injuries.
-    private static final List<Long> SAMPLE_PLAYER_IDS = List.of(321L, 13L, 69L, 92L, 173L, 91L);
+    private static final List<Long> SAMPLE_PLAYER_IDS = List.of(321L, 13L, 69L, 92L, 173L, 91L, 28L, 70L);
 
     private final InMemoryInjuryRepository injuryRepository = new InMemoryInjuryRepository();
 
@@ -27,6 +27,13 @@ class InMemoryInjuryRepositoryTest {
             .count();
 
         assertEquals(2, hamstrings);
+    }
+
+    @Test
+    void findByPlayerId_includesAnActiveInjury() {
+        // Mark Andrews is hurt now, so he's someone who can go on IR.
+        assertTrue(injuryRepository.findByPlayerId(28L).stream()
+            .anyMatch(injury -> injury.status().equals("Active")));
     }
 
     @Test

@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  assignSlots,
   BENCH,
   canMoveTo,
   DEFAULT_FORMAT,
   IR,
   isRosterEligible,
+  placeEntries,
   rosterLimit,
 } from "./rosterFormats";
 import { lineupFormat } from "./rosterFormats.fixture";
@@ -14,10 +14,11 @@ const ESPN = lineupFormat("espn-standard");
 const YAHOO = lineupFormat("yahoo-standard");
 const SLEEPER = lineupFormat("sleeper-default");
 
-const player = (id, position) => ({ id, position });
-const slotLabels = (format, players, assignments = {}) => {
-  const slots = assignSlots(format, players, assignments);
-  return players.map((p) => slots.get(p.id).label);
+// Roster entries as the backend sends them, in the order they were added.
+const entry = (playerId, slot) => ({ id: playerId, playerId, slot, note: "" });
+const spotIds = (format, entries) => {
+  const spots = placeEntries(format, entries);
+  return entries.map((e) => spots.get(e.playerId).id);
 };
 
 describe("toLineupFormat", () => {
@@ -80,71 +81,37 @@ describe("isRosterEligible", () => {
   });
 });
 
-describe("assignSlots", () => {
-  it("fills the starting slots a position is allowed in, in order", () => {
-    const players = [player(1, "QB"), player(2, "RB"), player(3, "RB"), player(4, "PK")];
+describe("placeEntries", () => {
+  it("puts each player in the spot for their backend slot", () => {
+    const entries = [entry(1, "QB"), entry(2, "K"), entry(3, "DEF"), entry(4, "FLEX")];
 
-    expect(slotLabels(ESPN, players)).toEqual(["QB", "RB", "RB", "K"]);
+    expect(spotIds(ESPN, entries)).toEqual(["QB", "K", "DEF", "FLEX"]);
   });
 
-  it("sends a third RB to FLEX, then extra players to the bench", () => {
-    const players = [player(1, "RB"), player(2, "RB"), player(3, "RB"), player(4, "RB")];
-
-    expect(slotLabels(ESPN, players)).toEqual(["RB", "RB", "FLEX", "Bench"]);
-    expect(assignSlots(ESPN, players).get(4)).toBe(BENCH);
+  it("fills a slot's spots in the order players were added", () => {
+    expect(spotIds(ESPN, [entry(1, "RB"), entry(2, "RB")])).toEqual(["RB1", "RB2"]);
+    expect(spotIds(SLEEPER, [entry(1, "FLEX"), entry(2, "FLEX")])).toEqual(["FLEX1", "FLEX2"]);
   });
 
-  it("starts a fourth RB in Sleeper's second FLEX", () => {
-    const players = [player(1, "RB"), player(2, "RB"), player(3, "RB"), player(4, "RB")];
+  it("puts BENCH and IR players on the shared bench and IR spots", () => {
+    const spots = placeEntries(ESPN, [entry(1, "BENCH"), entry(2, "BENCH"), entry(3, "IR")]);
 
-    expect(slotLabels(SLEEPER, players)).toEqual(["RB", "RB", "FLEX", "FLEX"]);
+    expect(spots.get(1)).toBe(BENCH);
+    expect(spots.get(2)).toBe(BENCH);
+    expect(spots.get(3)).toBe(IR);
   });
 
-  it("puts a second QB on the bench", () => {
-    expect(slotLabels(ESPN, [player(1, "QB"), player(2, "QB")])).toEqual(["QB", "Bench"]);
+  it("benches a player whose slot the format doesn't have, or has no room left in", () => {
+    // ESPN Standard has one FLEX spot and no SUPERFLEX.
+    expect(spotIds(ESPN, [entry(1, "FLEX"), entry(2, "FLEX")])).toEqual(["FLEX", "BN"]);
+    expect(spotIds(ESPN, [entry(1, "SUPERFLEX")])).toEqual(["BN"]);
+    expect(spotIds(ESPN, [entry(1, undefined)])).toEqual(["BN"]);
   });
 
-  it("treats a fullback as a running back", () => {
-    expect(slotLabels(ESPN, [player(1, "FB")])).toEqual(["RB"]);
-  });
-});
-
-describe("assignSlots with the user's moves", () => {
-  it("keeps a move that fits the format, and fills around it", () => {
-    const players = [player(1, "RB"), player(2, "RB")];
-
-    // Player 1 was moved to FLEX, so player 2 takes the first RB slot.
-    expect(slotLabels(ESPN, players, { 1: "FLEX" })).toEqual(["FLEX", "RB"]);
-  });
-
-  it("keeps players on the bench and IR", () => {
-    const players = [player(1, "QB"), player(2, "WR")];
-    const slots = assignSlots(ESPN, players, { 1: "BN", 2: "IR" });
-
-    expect(slots.get(1)).toBe(BENCH);
-    expect(slots.get(2)).toBe(IR);
-  });
-
-  it("ignores a move into a slot the position isn't allowed in", () => {
-    expect(slotLabels(ESPN, [player(1, "QB")], { 1: "RB1" })).toEqual(["QB"]);
-  });
-
-  it("ignores a move into a slot the format doesn't have", () => {
-    expect(slotLabels(ESPN, [player(1, "RB")], { 1: "FLEX2" })).toEqual(["RB"]);
-  });
-
-  it("only lets as many players onto IR as the format allows", () => {
-    const players = [player(1, "WR"), player(2, "WR"), player(3, "WR")];
-    const espn = assignSlots(ESPN, players, { 1: "IR", 2: "IR" });
-    const yahoo = assignSlots(YAHOO, players, { 1: "IR", 2: "IR", 3: "IR" });
-    const sleeper = assignSlots(SLEEPER, players, { 1: "IR" });
-
-    expect(espn.get(1)).toBe(IR);
-    expect(espn.get(2)).not.toBe(IR);
-    expect(yahoo.get(1)).toBe(IR);
-    expect(yahoo.get(2)).toBe(IR);
-    expect(yahoo.get(3)).not.toBe(IR);
-    expect(sleeper.get(1)).not.toBe(IR);
+  it("gives every spot the backend's slot name to move into", () => {
+    expect(ESPN.starters.find((s) => s.id === "RB2").slot).toBe("RB");
+    expect(BENCH.slot).toBe("BENCH");
+    expect(IR.slot).toBe("IR");
   });
 });
 
