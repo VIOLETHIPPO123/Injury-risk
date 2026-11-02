@@ -29,3 +29,19 @@ export function tierRank(risk) {
 export function acwrDistance(acwr) {
   return acwr === null ? null : Math.abs(acwr - 1);
 }
+
+// One ACWR per week from a player's history ([{ week, snaps }], oldest first, snaps null on
+// a bye week). Each game is scored the way calculateAcwr scores the player page: that game's
+// snaps against the average of the last four games, including it. It counts games, not
+// weeks, so a bye is skipped instead of counting as 0, and its acwr is null (a gap). Games
+// before the player has four have a null acwr too.
+export function weeklyAcwr(history) {
+  const games = [];
+  return history.map(({ week, snaps }) => {
+    if (snaps === null) return { week, snaps, acwr: null };
+    games.push(snaps);
+    if (games.length < 4) return { week, snaps, acwr: null };
+    const lastFour = games.slice(-4).reduce((sum, s) => sum + s, 0);
+    return { week, snaps, acwr: calculateAcwr(snaps, lastFour) };
+  });
+}
