@@ -28,7 +28,7 @@ function jsonResponse(status, body) {
   });
 }
 
-// What the roster endpoint (GET /watchlist on the backend) returns when the app loads. Tests that start with entries overwrite it.
+// What the roster endpoint (GET /roster on the backend) returns when the app loads. Tests that start with entries overwrite it.
 let savedEntries = [];
 // The league's format, as GET /roster/settings returns it. PUT /roster/settings changes it.
 let savedFormatId = "espn-standard";
@@ -41,13 +41,19 @@ beforeEach(() => {
     "fetch",
     vi.fn((url, options = {}) => {
       const method = options.method ?? "GET";
-      const id = Number(url.match(/\/watchlist\/(\d+)$/)?.[1]);
+      const id = Number(url.match(/\/roster\/(\d+)$/)?.[1]);
+      const movedId = Number(url.match(/\/roster\/(\d+)\/slot$/)?.[1]);
 
-      if (url.endsWith("/watchlist") && method === "POST") {
+      if (url.endsWith("/roster") && method === "POST") {
         const { playerId, note } = JSON.parse(options.body);
-        return jsonResponse(201, { id: 1, playerId, note });
+        return jsonResponse(201, { id: 1, playerId, slot: "BENCH", note });
       }
-      if (url.endsWith("/watchlist")) return jsonResponse(200, savedEntries);
+      if (url.endsWith("/roster")) return jsonResponse(200, savedEntries);
+      if (movedId && method === "PUT") {
+        const { slot } = JSON.parse(options.body);
+        savedEntries = savedEntries.map((e) => (e.id === movedId ? { ...e, slot } : e));
+        return jsonResponse(200, savedEntries.find((e) => e.id === movedId));
+      }
       if (id && method === "PUT") {
         const existing = savedEntries.find((e) => e.id === id);
         return jsonResponse(200, { ...existing, ...JSON.parse(options.body) });
@@ -68,7 +74,7 @@ beforeEach(() => {
 
 function rosterGetCalls() {
   return fetch.mock.calls.filter(
-    ([url, opts]) => url.endsWith("/watchlist") && opts?.method === "GET",
+    ([url, opts]) => url.endsWith("/roster") && opts?.method === "GET",
   );
 }
 
@@ -243,7 +249,7 @@ test("Add to roster submits the expected payload and the player shows up on My R
 
   // Assert — the request sent to the backend
   const postCall = fetch.mock.calls.find(([, opts]) => opts?.method === "POST");
-  expect(postCall[0]).toBe("http://localhost:8080/watchlist");
+  expect(postCall[0]).toBe("http://localhost:8080/roster");
   expect(postCall[1].headers).toEqual({ "Content-Type": "application/json" });
   expect(JSON.parse(postCall[1].body)).toEqual({ playerId: 7, note: "" });
 
@@ -474,7 +480,7 @@ describe("roster limits and errors", () => {
 
     // Assert
     expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Roster error: POST /watchlist failed with status 404",
+      "Roster error: POST /roster failed with status 404",
     );
     expect(screen.getByText("Add to roster")).toBeEnabled();
   });
@@ -482,11 +488,12 @@ describe("roster limits and errors", () => {
 
 describe("the lineup on My Roster", () => {
   const rb = (id, name) => ({ id, name, team: "DAL", position: "RB", snapsLastGame: 50, snapsLast4Games: 200 });
-  // Added in this order, they fill RB, RB, FLEX, then the bench.
+  // Added in this order; the backend has them in RB, RB, FLEX and on the bench.
   const RBS = [rb(1, "Back One"), rb(2, "Back Two"), rb(3, "Back Three"), rb(4, "Back Four")];
 
   async function openLineup() {
-    savedEntries = RBS.map((p) => ({ id: p.id, playerId: p.id, note: "" }));
+    const slots = ["RB", "RB", "FLEX", "BENCH"];
+    savedEntries = RBS.map((p, i) => ({ id: p.id, playerId: p.id, slot: slots[i], note: "" }));
     await renderHome(RBS);
     await openMyRosterPage();
     await screen.findByText("Back Four");
@@ -499,6 +506,8 @@ describe("the lineup on My Roster", () => {
 
     fireEvent.change(screen.getByRole("combobox", { name: "Move Back One" }), { target: { value: "BN" } });
 
+    await waitFor(() => expect(listText("Bench")).toContain("Back One"));
+    expect(savedEntries.find((e) => e.id === 1).slot).toBe("BENCH");
     const starters = within(screen.getByRole("list", { name: "Starters" }));
     expect(starters.queryByText("Back One")).not.toBeInTheDocument();
     expect(starters.queryByText("Back Four")).not.toBeInTheDocument();
@@ -511,8 +520,27 @@ describe("the lineup on My Roster", () => {
 
     fireEvent.change(screen.getByRole("combobox", { name: "Move Back Four" }), { target: { value: "RB1" } });
 
-    expect(listText("Starters")).toContain("Back Four");
+    await waitFor(() => expect(listText("Starters")).toContain("Back Four"));
     expect(listText("Bench")).toContain("Back One");
+    expect(savedEntries.map((e) => e.slot)).toEqual(["BENCH", "RB", "FLEX", "RB"]);
+  });
+
+  test("a move the backend refuses shows why, and the player stays put", async () => {
+    await openLineup();
+    fetch.mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: false,
+        status: 409,
+        json: () => Promise.resolve({ error: "Only a player with an Active injury can go on IR: 4" }),
+      }),
+    );
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Move Back Four" }), { target: { value: "IR" } });
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Roster error: PUT /roster/4/slot failed with status 409: Only a player with an Active injury can go on IR: 4",
+    );
+    expect(listText("Bench")).toContain("Back Four");
   });
 
   test("switching format after confirming saves it and moves every player to the bench", async () => {

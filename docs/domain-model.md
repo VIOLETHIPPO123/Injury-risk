@@ -49,22 +49,28 @@ Today's implementation, `InMemoryTeamRepository`, is a hardcoded list of all
 32 NFL teams, served by `TeamService` (`GET /teams`). Planned: an
 external-API-backed implementation.
 
-### WatchlistEntry — Implemented
+### RosterEntry — Implemented
 
-`backend/.../model/WatchlistEntry.java`
+`backend/.../model/RosterEntry.java` (was `WatchlistEntry` before DEV-86)
 
 | Attribute | Type | Notes |
 |---|---|---|
 | id | Long | Assigned by the repository |
 | playerId | Long | References `Player.id`; validated to exist on create |
-| note | String | Free text; the only field that's editable after creation |
+| slot | String | A starting slot of the league's format (a `RosterSlot` name, e.g. `"RB"`), `BENCH` or `IR`. New players start on `BENCH` |
+| note | String | Free text; editable after creation |
 
-Persisted through the `WatchlistRepository` interface. Today's
-implementation, `InMemoryWatchlistRepository`, is an in-memory
-`ConcurrentHashMap` (comment confirms: "until a database is wired in. Data
-resets when the backend restarts"). Full CRUD exists except a list/`GET` endpoint. No
-`userId` field — this is currently a single global watchlist, not
-per-user (see **User**, below).
+Served at `/roster` (CRUD, plus `PUT /roster/{id}/slot` to move a player).
+Persisted through the `RosterEntryRepository` interface. Today's
+implementation, `InMemoryRosterEntryRepository`, is an in-memory
+`ConcurrentHashMap` (data resets when the backend restarts). The rules live
+in one validator class each: `RosterEntryValidator`s for adding (player
+exists, fantasy-eligible position, not already rostered, roster not full),
+`SlotMoveValidator`s for moving (slot allows the position, slot has room, IR
+needs an Active injury, leaving IR needs a free spot), and
+`FormatChangeValidator`s for switching formats (the roster fits the new
+maximum). Switching formats moves every player to the bench. No `userId`
+field — this is a single global roster, not per-user (see **User**, below).
 
 ### WorkloadRatio (ACWR) — Derived
 
@@ -123,9 +129,9 @@ The personas and user stories throughout `docs/requirements.md` describe
 a fantasy manager with **their own roster** inside a **league** of other
 managers — but no `User`, `League`, or `Roster` class exists anywhere in
 the code. This is the biggest gap between the described domain and the
-current implementation: today's `WatchlistEntry` is a single global list
-with no owner, so there's no actual concept yet of "my roster" vs. "the
-full player pool." Multi-league support is explicitly out of scope for
+current implementation: today's `RosterEntry` list is a single global roster
+with no owner, so there's no concept yet of one manager's roster vs.
+another's. Multi-league support is explicitly out of scope for
 this semester's MVP, but even single-league, single-user support implies
 at least a `User` and a `Roster` (a User's chosen subset of Players)
 eventually need to exist.
@@ -135,7 +141,7 @@ eventually need to exist.
 | From | To | Multiplicity | Notes |
 |---|---|---|---|
 | Team | Player | 1 → * | By matching `Player.team` (string code) to `Team.code` — a soft/logical reference, not an enforced foreign key (no database yet) |
-| Player | WatchlistEntry | 1 → * | Via `WatchlistEntry.playerId`; validated against `PlayerRepository` on create, but not a real FK constraint |
+| Player | RosterEntry | 1 → 0..1 | Via `RosterEntry.playerId`; validated against `PlayerRepository` on create (and a player can be rostered once), but not a real FK constraint |
 | Division/Conference | Team | 1 → * | Static grouping only, defined in frontend data, not derivable from `Team` itself |
 | Player | WorkloadRatio | 1 → 1 (derived) | Computed per player per request from that player's two snap-count fields |
 | WorkloadRatio | RiskLevel | 1 → 1 (derived) | Pure function of the ratio value; no independent identity |
@@ -151,7 +157,7 @@ flat, unrelated data holders (no shared base class, no polymorphism).
 
 ## Summary for diagramming
 
-- **Solid, ready to diagram as-is:** `Player`, `Team`, `WatchlistEntry`,
+- **Solid, ready to diagram as-is:** `Player`, `Team`, `RosterEntry`,
   and their two real relationships.
 - **Worth showing as derived/computed nodes** (dashed, not persisted):
   `WorkloadRatio`, `RiskLevel`, `Division`/`Conference`.

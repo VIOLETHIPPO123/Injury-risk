@@ -4,6 +4,7 @@ import {
   getRoster,
   getRosterFormats,
   getRosterSettings,
+  moveRosterEntry,
   removeFromRoster,
   updateRosterEntry,
   updateRosterSettings,
@@ -26,7 +27,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test("addToRoster POSTs { playerId, note } as JSON to /watchlist", async () => {
+test("addToRoster POSTs { playerId, note } as JSON to /roster", async () => {
   // Arrange
   mockFetchResponse(201, { id: 1, playerId: 7, note: "" });
 
@@ -36,7 +37,7 @@ test("addToRoster POSTs { playerId, note } as JSON to /watchlist", async () => {
   // Assert
   expect(fetch).toHaveBeenCalledTimes(1);
   const [url, options] = fetch.mock.calls[0];
-  expect(url).toBe("http://localhost:8080/watchlist");
+  expect(url).toBe("http://localhost:8080/roster");
   expect(options.method).toBe("POST");
   expect(options.headers).toEqual({ "Content-Type": "application/json" });
   expect(JSON.parse(options.body)).toEqual({ playerId: 7, note: "" });
@@ -57,7 +58,7 @@ test("addToRoster includes a note when one is given", async () => {
   });
 });
 
-test("getRoster GETs /watchlist and returns the entries", async () => {
+test("getRoster GETs /roster and returns the entries", async () => {
   // Arrange
   const entries = [{ id: 1, playerId: 7, note: "" }];
   mockFetchResponse(200, entries);
@@ -66,13 +67,13 @@ test("getRoster GETs /watchlist and returns the entries", async () => {
   const result = await getRoster();
 
   // Assert
-  expect(fetch).toHaveBeenCalledWith("http://localhost:8080/watchlist", {
+  expect(fetch).toHaveBeenCalledWith("http://localhost:8080/roster", {
     method: "GET",
   });
   expect(result).toEqual(entries);
 });
 
-test("updateRosterEntry PUTs only the note to /watchlist/{id}", async () => {
+test("updateRosterEntry PUTs only the note to /roster/{id}", async () => {
   // Arrange
   mockFetchResponse(200, { id: 3, playerId: 7, note: "Snap share dropping" });
 
@@ -81,12 +82,12 @@ test("updateRosterEntry PUTs only the note to /watchlist/{id}", async () => {
 
   // Assert
   const [url, options] = fetch.mock.calls[0];
-  expect(url).toBe("http://localhost:8080/watchlist/3");
+  expect(url).toBe("http://localhost:8080/roster/3");
   expect(options.method).toBe("PUT");
   expect(JSON.parse(options.body)).toEqual({ note: "Snap share dropping" });
 });
 
-test("removeFromRoster DELETEs /watchlist/{id} without parsing the 204 body", async () => {
+test("removeFromRoster DELETEs /roster/{id} without parsing the 204 body", async () => {
   // Arrange
   mockFetchResponse(204);
 
@@ -94,7 +95,7 @@ test("removeFromRoster DELETEs /watchlist/{id} without parsing the 204 body", as
   const result = await removeFromRoster(3);
 
   // Assert
-  expect(fetch).toHaveBeenCalledWith("http://localhost:8080/watchlist/3", {
+  expect(fetch).toHaveBeenCalledWith("http://localhost:8080/roster/3", {
     method: "DELETE",
   });
   expect(result).toBeNull();
@@ -106,7 +107,7 @@ test("a failed request throws with the method, path and status", async () => {
 
   // Act + Assert
   await expect(addToRoster(9999)).rejects.toThrow(
-    "POST /watchlist failed with status 404",
+    "POST /roster failed with status 404",
   );
 });
 
@@ -147,4 +148,29 @@ test("updateRosterSettings PUTs { formatId } to /roster/settings", async () => {
   expect(url).toBe("http://localhost:8080/roster/settings");
   expect(options.method).toBe("PUT");
   expect(JSON.parse(options.body)).toEqual({ formatId: "sleeper-default" });
+});
+
+test("moveRosterEntry PUTs { slot } to /roster/{id}/slot", async () => {
+  // Arrange
+  mockFetchResponse(200, { id: 3, playerId: 7, slot: "QB", note: "" });
+
+  // Act
+  const entry = await moveRosterEntry(3, "QB");
+
+  // Assert
+  const [url, options] = fetch.mock.calls[0];
+  expect(url).toBe("http://localhost:8080/roster/3/slot");
+  expect(options.method).toBe("PUT");
+  expect(JSON.parse(options.body)).toEqual({ slot: "QB" });
+  expect(entry.slot).toBe("QB");
+});
+
+test("a rejected request includes the backend's reason", async () => {
+  // Arrange
+  mockFetchResponse(409, { error: "No open spot in QB" });
+
+  // Act + Assert
+  await expect(moveRosterEntry(3, "QB")).rejects.toThrow(
+    "PUT /roster/3/slot failed with status 409: No open spot in QB",
+  );
 });

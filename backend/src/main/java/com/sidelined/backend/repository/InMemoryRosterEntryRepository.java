@@ -1,6 +1,6 @@
 package com.sidelined.backend.repository;
 
-import com.sidelined.backend.model.WatchlistEntry;
+import com.sidelined.backend.model.RosterEntry;
 import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,13 +11,13 @@ import java.util.concurrent.atomic.AtomicLong;
 
 // In-memory store until a database is wired in. Data resets when the backend restarts.
 @Repository
-public class InMemoryWatchlistRepository implements WatchlistRepository {
+public class InMemoryRosterEntryRepository implements RosterEntryRepository {
 
-    private final Map<Long, WatchlistEntry> entries = new ConcurrentHashMap<>();
+    private final Map<Long, RosterEntry> entries = new ConcurrentHashMap<>();
     private final AtomicLong nextId = new AtomicLong(1);
 
     @Override
-    public WatchlistEntry save(WatchlistEntry entry) {
+    public RosterEntry save(RosterEntry entry) {
         if (entry.getId() == null) {
             entry.setId(nextId.getAndIncrement());
         }
@@ -26,12 +26,12 @@ public class InMemoryWatchlistRepository implements WatchlistRepository {
     }
 
     @Override
-    public List<WatchlistEntry> findAll() {
+    public List<RosterEntry> findAll() {
         return new ArrayList<>(entries.values());
     }
 
     @Override
-    public Optional<WatchlistEntry> findById(Long id) {
+    public Optional<RosterEntry> findById(Long id) {
         return Optional.ofNullable(entries.get(id));
     }
 

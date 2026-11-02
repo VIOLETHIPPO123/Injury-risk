@@ -16,6 +16,7 @@ import {
   getRoster,
   addToRoster,
   updateRosterEntry,
+  moveRosterEntry,
   removeFromRoster,
   getRosterFormats,
   getRosterSettings,
@@ -23,9 +24,11 @@ import {
 } from "./services/rosterService";
 import { EMPTY_SEARCH } from "./utils/filterPlayers";
 import {
-  assignSlots,
   BENCH,
   DEFAULT_FORMAT,
+  IR,
+  isStarterSlot,
+  placeEntries,
   rosterLimit,
   toLineupFormat,
 } from "./utils/rosterFormats";
@@ -52,9 +55,6 @@ function App() {
   // Every format the league can pick (from the backend), and the id of the one it has.
   const [rosterFormats, setRosterFormats] = useState([]);
   const [rosterFormat, setRosterFormat] = useState(DEFAULT_FORMAT);
-  // The lineup moves the user has made: player id -> slot id. Players without one are
-  // placed automatically (see assignSlots).
-  const [assignments, setAssignments] = useState({});
   // Lives here, not in SearchPage, so the query and chips survive leaving the page.
   const [search, setSearch] = useState(EMPTY_SEARCH);
 
@@ -122,34 +122,48 @@ function App() {
   // Until the formats load there's no lineup, so no limit and no slots.
   const format = rosterFormats.find((f) => f.id === rosterFormat);
   const limit = format ? rosterLimit(format) : undefined;
-  // Slots go to players in the order they were added (entry ids are assigned in that order).
-  const rosterPlayers = [...roster]
-    .sort((a, b) => a.id - b.id)
+  // In the order they were added (entry ids are assigned in that order), so players
+  // sharing a slot keep their spots, e.g. the first RB in RB1.
+  const entries = [...roster].sort((a, b) => a.id - b.id);
+  const rosterPlayers = entries
     .map((entry) => players.find((p) => p.id === entry.playerId))
     .filter(Boolean);
-  const slots = format ? assignSlots(format, rosterPlayers, assignments) : new Map();
+  const slots = format ? placeEntries(format, entries) : new Map();
   const rosteredPlayers = rosterPlayers.map((p) => ({ ...p, slot: slots.get(p.id) }));
+  // IR spots are on top of the roster limit, as on the backend.
+  const countedTowardLimit = roster.filter((e) => e.slot !== IR.slot).length;
 
-  // Pins everyone to their current slot before applying the move, so benching one RB
-  // doesn't let the automatic placement promote a different bench RB in their place.
-  // A player already in the target starting slot goes to the bench.
-  function handleMove(playerId, slotId) {
-    const next = Object.fromEntries(rosterPlayers.map((p) => [p.id, slots.get(p.id).id]));
-    const occupant = rosterPlayers.find(
-      (p) => p.id !== playerId && slots.get(p.id).id === slotId && slotId !== BENCH.id,
-    );
-    if (occupant) next[occupant.id] = BENCH.id;
-    next[playerId] = slotId;
-    setAssignments(next);
+  const replaceEntry = (updated) =>
+    setRoster((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+
+  // The backend won't move anyone into a filled spot, so whoever holds the chosen starting
+  // spot goes to the bench first. The backend has the last word on every move (an IR
+  // move needs an Active injury, say); a refusal shows in the error banner.
+  function handleMove(playerId, spotId) {
+    const target = [...format.starters, BENCH, IR].find((s) => s.id === spotId);
+    const entryId = (id) => roster.find((e) => e.playerId === id).id;
+    const occupant = isStarterSlot(target)
+      ? rosterPlayers.find((p) => p.id !== playerId && slots.get(p.id) === target)
+      : undefined;
+
+    setRosterError(null);
+    const benchOccupant = occupant
+      ? moveRosterEntry(entryId(occupant.id), BENCH.slot).then(replaceEntry)
+      : Promise.resolve();
+    benchOccupant
+      .then(() => moveRosterEntry(entryId(playerId), target.slot))
+      .then(replaceEntry)
+      .catch((err) => setRosterError(err.message));
   }
 
-  // Saved to the backend first; the lineup only changes once the league's format has.
+  // The backend moves everyone to the bench when the format changes, so mirror that here
+  // rather than re-fetching the roster.
   function handleFormatChange(formatId) {
     setRosterError(null);
     updateRosterSettings(formatId)
       .then((settings) => {
         setRosterFormat(settings.formatId);
-        setAssignments(Object.fromEntries(rosterPlayers.map((p) => [p.id, BENCH.id])));
+        setRoster((prev) => prev.map((e) => ({ ...e, slot: BENCH.slot })));
       })
       .catch((err) => setRosterError(err.message));
   }
@@ -178,20 +192,15 @@ function App() {
 
   function handleRemoveFromRoster(id) {
     setRosterError(null);
-    const playerId = roster.find((e) => e.id === id)?.playerId;
     removeFromRoster(id)
-      .then(() => {
-        setRoster((prev) => prev.filter((e) => e.id !== id));
-        // Forget their slot so re-adding them later places them afresh.
-        setAssignments(({ [playerId]: _removed, ...rest }) => rest);
-      })
+      .then(() => setRoster((prev) => prev.filter((e) => e.id !== id)))
       .catch((err) => setRosterError(err.message));
   }
 
   // What the player cards need to show the badge or the add button.
   const rosterControls = {
     ids: new Set(roster.map((entry) => entry.playerId)),
-    isFull: limit !== undefined && roster.length >= limit,
+    isFull: limit !== undefined && countedTowardLimit >= limit,
     limit,
     onAdd: handleAddToRoster,
   };
@@ -303,7 +312,7 @@ function App() {
             {
               id: "my-roster",
               label: "My Roster",
-              detail: `On your roster: ${roster.length}${limit === undefined ? "" : ` / ${limit}`}`,
+              detail: `On your roster: ${countedTowardLimit}${limit === undefined ? "" : ` / ${limit}`}`,
               onClick: () => setView("my-roster"),
             },
             {

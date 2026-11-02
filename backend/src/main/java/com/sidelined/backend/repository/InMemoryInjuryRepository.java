@@ -35,7 +35,13 @@ public class InMemoryInjuryRepository implements InjuryRepository {
         // Javonte Williams
         91L, List.of(
             new Injury(2022, 4, "Knee", "Torn ACL", 13, "Recovered"),
-            new Injury(2025, 10, "Hamstring", "Strain", 1, "Recovered"))
+            new Injury(2025, 10, "Hamstring", "Strain", 1, "Recovered")),
+        // Mark Andrews and Tee Higgins: hurt now ("Active"), so they can go on IR.
+        28L, List.of(
+            new Injury(2026, 8, "Ankle", "High sprain", 0, "Active")),
+        70L, List.of(
+            new Injury(2025, 6, "Concussion", "Concussion", 1, "Recovered"),
+            new Injury(2026, 7, "Hamstring", "Strain", 1, "Active"))
     );
 
     @Override

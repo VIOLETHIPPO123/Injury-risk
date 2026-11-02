@@ -106,7 +106,8 @@ function LineupRow({ label, row, renderItem }) {
 
 // The lineup for the chosen format: starting slots, then bench and IR. `formats` are the
 // lineup formats (from toLineupFormat) and `formatId` the chosen one's id. `slots` maps each
-// player id to the slot they fill (from assignSlots); `limit` is the format's roster size.
+// player id to the slot they fill (from placeEntries); `limit` is the format's roster size,
+// which players on IR don't count toward.
 function MyRosterPage({
   entries,
   players,
@@ -192,7 +193,7 @@ function MyRosterPage({
       <h1>My Roster</h1>
       {limit !== undefined && (
         <p className="my-roster-count">
-          {entries.length} / {limit} players
+          {entries.filter((e) => e.slot !== IR.slot).length} / {limit} players
         </p>
       )}
 

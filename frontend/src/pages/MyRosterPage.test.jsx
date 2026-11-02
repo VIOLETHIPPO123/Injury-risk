@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import MyRosterPage from "./MyRosterPage";
-import { assignSlots } from "../utils/rosterFormats";
+import { placeEntries } from "../utils/rosterFormats";
 import { lineupFormat, LINEUP_FORMATS } from "../utils/rosterFormats.fixture";
 
 // ACWR = last game ÷ (last four ÷ 4).
@@ -13,17 +13,22 @@ const WILLIAMS = player(8, "Javonte Williams", "RB", 80, 200); // 1.6, Spiking �
 const LUEPKE = player(9, "Hunter Luepke", "FB", 50, 200); // 1.0, Normal
 const LAMB = player(10, "CeeDee Lamb", "WR");
 
-const entry = (id, playerId, note = "") => ({ id, playerId, note });
+const entry = (id, playerId, slot, note = "") => ({ id, playerId, slot, note });
 
-// Renders the page the way App does: slots come from assignSlots for the format.
-function renderPage({ formatId = "espn-standard", roster = [PRESCOTT], assignments = {}, notes = {}, ...overrides } = {}) {
-  const entries = roster.map((p, i) => entry(i + 1, p.id, notes[p.id] ?? ""));
+// Where a player is unless a test says otherwise: their own position's starting slot.
+const STARTING_SLOT = { QB: "QB", RB: "RB", FB: "RB", WR: "WR", TE: "TE", PK: "K" };
+
+// Renders the page the way App does: spots come from placeEntries for the format.
+// `slotOf` (player id -> backend slot, e.g. "RB" or "BENCH") overrides where players are.
+function renderPage({ formatId = "espn-standard", roster = [PRESCOTT], slotOf = {}, notes = {}, ...overrides } = {}) {
+  const entries = roster.map((p, i) =>
+    entry(i + 1, p.id, slotOf[p.id] ?? STARTING_SLOT[p.position], notes[p.id] ?? ""));
   const props = {
     entries,
     players: roster,
     formats: LINEUP_FORMATS,
     formatId,
-    slots: assignSlots(lineupFormat(formatId), roster, assignments),
+    slots: placeEntries(lineupFormat(formatId), entries),
     limit: 16,
     onFormatChange: vi.fn(),
     onMove: vi.fn(),
@@ -89,6 +94,12 @@ test("shows how full the roster is, and each player's risk tier", () => {
   expect(screen.getByText("ACWR 1.00 · Normal workload")).toBeInTheDocument();
 });
 
+test("players on IR don't count toward the roster limit", () => {
+  renderPage({ roster: [PRESCOTT, LAMB], slotOf: { 10: "IR" } });
+
+  expect(screen.getByText("1 / 16 players")).toBeInTheDocument();
+});
+
 // ---------- Layout per format ----------
 
 describe("the lineup matches the selected format", () => {
@@ -120,7 +131,7 @@ describe("the lineup matches the selected format", () => {
   });
 
   test("a benched player fills a bench spot, and the position shows when the slot doesn't say it", () => {
-    renderPage({ assignments: { 7: "BN" } });
+    renderPage({ slotOf: { 7: "BENCH" } });
 
     expect(openCount("Starters")).toBe(9);
     expect(openCount("Bench")).toBe(6);
@@ -148,7 +159,7 @@ describe("moving players", () => {
   });
 
   test("a fullback can move into an RB slot or FLEX", () => {
-    renderPage({ roster: [LUEPKE], assignments: { 9: "BN" } });
+    renderPage({ roster: [LUEPKE], slotOf: { 9: "BENCH" } });
 
     const select = screen.getByRole("combobox", { name: "Move Hunter Luepke" });
     expect(within(select).getAllByRole("option", { name: "RB — open" })[0]).toBeEnabled();
@@ -157,7 +168,7 @@ describe("moving players", () => {
   });
 
   test("IR is disabled once it's full", () => {
-    renderPage({ roster: [PRESCOTT, LAMB], assignments: { 10: "IR" } });
+    renderPage({ roster: [PRESCOTT, LAMB], slotOf: { 10: "IR" } });
 
     const select = screen.getByRole("combobox", { name: "Move Dak Prescott" });
     expect(within(select).getByRole("option", { name: "IR" })).toBeDisabled();
@@ -220,27 +231,27 @@ describe("changing the format", () => {
 describe("bench suggestions", () => {
   test("suggests a lower-risk bench player who is allowed in a high-risk starter's slot", () => {
     // Williams starts at RB and is spiking; Luepke (FB) on the bench is normal and can play RB.
-    renderPage({ roster: [WILLIAMS, LUEPKE], assignments: { 8: "RB1", 9: "BN" } });
+    renderPage({ roster: [WILLIAMS, LUEPKE], slotOf: { 8: "RB", 9: "BENCH" } });
 
     expect(screen.getByText("Consider starting Hunter Luepke over Javonte Williams.")).toBeInTheDocument();
   });
 
   test("makes no suggestion when the only bench player isn't allowed in that slot", () => {
     // Lamb (WR) can't play the RB slot Williams is in.
-    renderPage({ roster: [WILLIAMS, LAMB], assignments: { 8: "RB1", 10: "BN" } });
+    renderPage({ roster: [WILLIAMS, LAMB], slotOf: { 8: "RB", 10: "BENCH" } });
 
     expect(screen.queryByText(/Consider starting/)).not.toBeInTheDocument();
   });
 
   test("makes no suggestion when the bench player wouldn't lower the risk", () => {
     const spiking = player(11, "Rico Dowdle", "RB", 90, 200); // 1.8, also high, and further from 1.0
-    renderPage({ roster: [WILLIAMS, spiking], assignments: { 8: "RB1", 11: "BN" } });
+    renderPage({ roster: [WILLIAMS, spiking], slotOf: { 8: "RB", 11: "BENCH" } });
 
     expect(screen.queryByText(/Consider starting/)).not.toBeInTheDocument();
   });
 
   test("makes no suggestion when no starter is high risk", () => {
-    renderPage({ roster: [LUEPKE, WILLIAMS], assignments: { 9: "RB1", 8: "BN" } });
+    renderPage({ roster: [LUEPKE, WILLIAMS], slotOf: { 9: "RB", 8: "BENCH" } });
 
     expect(screen.queryByText(/Consider starting/)).not.toBeInTheDocument();
   });
