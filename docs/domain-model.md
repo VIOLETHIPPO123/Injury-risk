@@ -105,13 +105,28 @@ rather than a per-game history. A real `WorkloadEntry` would likely need:
 calculation from actual per-game data instead of two rolling ints, and
 enabling the deferred "historical risk-score trend charts" feature.
 
-### Injury — Planned
+### Injury — Implemented
 
-Named in this ticket's scope and in DEV-55's data-source disclosure
-("public snap-count **and injury data**"). Not modeled anywhere in the
-codebase yet — no fields, no endpoint. Likely future shape: `player` (ref),
-`type`/`description`, `dateReported`, `status` (active/recovering/
-recovered), `source`.
+`backend/.../model/Injury.java`, status in `backend/.../model/InjuryStatus.java`
+
+| Attribute | Type | Notes |
+|---|---|---|
+| id | Long | Unique per injury |
+| playerId | Long | References `Player.id` |
+| season | int | e.g. 2026 |
+| week | int | 1–18 |
+| bodyPart | String | e.g. `"Hamstring"` |
+| type | String | e.g. `"Strain"` |
+| gamesMissed | int | 0 or more |
+| status | InjuryStatus | `Active`, `Recovering` or `Recovered` (JSON uses those labels) |
+
+Read through the read-only `InjuryRepository` interface, keyed by `id`, which
+also looks up a player's injuries (`findByPlayerId`) and answers "does this
+player have an Active injury?" (`hasActiveInjury`, which the IR rule uses).
+Today's implementation, `InMemoryInjuryRepository`, is made-up sample data
+for real players. Served by `InjuryService` at `GET /players/{id}/injuries`,
+newest first; an unknown player is a 404, a player with no injuries an empty
+list. Planned: an external-API-backed implementation.
 
 ### RiskScore — Planned (as a first-class, persisted concept)
 
@@ -146,7 +161,7 @@ eventually need to exist.
 | Player | WorkloadRatio | 1 → 1 (derived) | Computed per player per request from that player's two snap-count fields |
 | WorkloadRatio | RiskLevel | 1 → 1 (derived) | Pure function of the ratio value; no independent identity |
 | *(planned)* Player | WorkloadEntry | 1 → * | A player would have many workload entries (one per game/week) |
-| *(planned)* Player | Injury | 1 → * | A player could have multiple injury records over time |
+| Player | Injury | 1 → * | Via `Injury.playerId`; a player can have many injuries over time |
 | *(planned)* Player | RiskScore | 1 → * | If persisted, a player would accumulate a history of scores over time (one per computation), not just one current value |
 | *(planned)* User | Roster | 1 → * or 1 → 1 | Depends on whether multi-roster-per-user is ever needed; MVP likely only needs 1 → 1 |
 | *(planned)* Roster | Player | * → * | A roster holds many players; a player (league-wide pool) isn't exclusive to one roster's *data*, though typically exclusive to one manager's *claim* within a league |
@@ -162,7 +177,7 @@ flat, unrelated data holders (no shared base class, no polymorphism).
 - **Worth showing as derived/computed nodes** (dashed, not persisted):
   `WorkloadRatio`, `RiskLevel`, `Division`/`Conference`.
 - **Worth sketching as planned/future classes** (clearly marked distinct
-  from the implemented ones): `WorkloadEntry`, `Injury`, a persisted
+  from the implemented ones): `WorkloadEntry`, a persisted
   `RiskScore`, and the `User`/`League`/`Roster` cluster — the last of
   which represents the largest gap between the product vision in
   `docs/requirements.md` and what's actually implemented today.

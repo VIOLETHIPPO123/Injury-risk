@@ -1,15 +1,14 @@
 package com.sidelined.backend.validation;
 
 import com.sidelined.backend.exception.NoActiveInjuryException;
-import com.sidelined.backend.model.Injury;
 import com.sidelined.backend.model.RosterEntry;
 import com.sidelined.backend.repository.InjuryRepository;
 import org.junit.jupiter.api.Test;
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
+// Which injuries count as Active is tested in InMemoryInjuryRepositoryTest.
 class InjuredReserveValidatorTest {
 
     private final InjuryRepository injuryRepository = mock(InjuryRepository.class);
@@ -17,27 +16,16 @@ class InjuredReserveValidatorTest {
 
     private static final RosterEntry ENTRY = new RosterEntry(1L, 28L, RosterEntry.BENCH, "");
 
-    private static Injury injury(String status) {
-        return new Injury(2026, 8, "Ankle", "Sprain", 0, status);
-    }
-
     @Test
     void validate_toIr_withAnActiveInjury_passes() {
-        when(injuryRepository.findByPlayerId(28L)).thenReturn(List.of(injury("Recovered"), injury("Active")));
+        when(injuryRepository.hasActiveInjury(28L)).thenReturn(true);
 
         assertDoesNotThrow(() -> validator.validate(ENTRY, RosterEntry.IR));
     }
 
     @Test
-    void validate_toIr_withOnlyPastOrQuestionableInjuries_throws() {
-        when(injuryRepository.findByPlayerId(28L)).thenReturn(List.of(injury("Recovered"), injury("Questionable")));
-
-        assertThrows(NoActiveInjuryException.class, () -> validator.validate(ENTRY, RosterEntry.IR));
-    }
-
-    @Test
-    void validate_toIr_withNoInjuries_throws() {
-        when(injuryRepository.findByPlayerId(28L)).thenReturn(List.of());
+    void validate_toIr_withoutAnActiveInjury_throws() {
+        when(injuryRepository.hasActiveInjury(28L)).thenReturn(false);
 
         assertThrows(NoActiveInjuryException.class, () -> validator.validate(ENTRY, RosterEntry.IR));
     }
