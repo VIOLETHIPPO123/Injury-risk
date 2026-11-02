@@ -34,10 +34,10 @@ export function positionsInGroup(group) {
   return positions.length > 0 ? positions : [group];
 }
 
-// Watchlisted players in the same position group as `player`, never `player` itself.
-export function compareCandidates(player, watchlistedPlayers) {
+// Rostered players in the same position group as `player`, never `player` itself.
+export function compareCandidates(player, rosteredPlayers) {
   const group = positionGroup(player.position);
-  return watchlistedPlayers.filter(
+  return rosteredPlayers.filter(
     (other) =>
       other.id !== player.id && positionGroup(other.position) === group,
   );

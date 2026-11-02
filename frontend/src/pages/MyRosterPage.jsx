@@ -1,9 +1,9 @@
 import { useState } from "react";
 import RosterLink from "../components/RosterLink";
 import { calculateAcwr, riskLevel } from "../utils/acwr";
-import "./WatchlistPage.css";
+import "./MyRosterPage.css";
 
-function WatchlistItem({ entry, player, onUpdate, onRemove }) {
+function MyRosterItem({ entry, player, slot, onUpdate, onRemove }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(entry.note ?? "");
 
@@ -26,14 +26,19 @@ function WatchlistItem({ entry, player, onUpdate, onRemove }) {
   }
 
   return (
-    <li className={`watchlist-item risk-${risk.tier}`}>
-      <div className="watchlist-item-header">
+    <li className={`my-roster-item risk-${risk.tier}`}>
+      <div className="my-roster-item-header">
         <h2>{player ? player.name : `Unknown player #${entry.playerId}`}</h2>
         {player && (
-          <div className="watchlist-item-tags">
+          <div className="my-roster-item-tags">
+            {slot && <span className="slot">{slot.label}</span>}
             <span className="team">{player.team}</span>
-            <span className="position">{player.position}</span>
-            <span className="watchlist-item-risk">
+            {/* A QB in the QB slot would read "QB · ARI · QB"; the position only adds
+                something for FLEX, Bench, or e.g. an FB in an RB slot. */}
+            {player.position !== slot?.label && (
+              <span className="position">{player.position}</span>
+            )}
+            <span className="my-roster-item-risk">
               ACWR {acwr === null ? "—" : acwr.toFixed(2)} · {risk.label}
             </span>
           </div>
@@ -41,7 +46,7 @@ function WatchlistItem({ entry, player, onUpdate, onRemove }) {
       </div>
 
       {editing ? (
-        <form className="watchlist-item-form" onSubmit={handleSave}>
+        <form className="my-roster-item-form" onSubmit={handleSave}>
           <label htmlFor={`note-${entry.id}`}>Note</label>
           <textarea
             id={`note-${entry.id}`}
@@ -49,7 +54,7 @@ function WatchlistItem({ entry, player, onUpdate, onRemove }) {
             onChange={(e) => setDraft(e.target.value)}
             rows={2}
           />
-          <div className="watchlist-item-actions">
+          <div className="my-roster-item-actions">
             <button type="submit">Save</button>
             <button type="button" onClick={handleCancel}>
               Cancel
@@ -58,10 +63,10 @@ function WatchlistItem({ entry, player, onUpdate, onRemove }) {
         </form>
       ) : (
         <>
-          <p className="watchlist-item-note">
+          <p className="my-roster-item-note">
             {entry.note ? entry.note : <em>No note yet.</em>}
           </p>
-          <div className="watchlist-item-actions">
+          <div className="my-roster-item-actions">
             <button type="button" onClick={() => setEditing(true)}>
               Edit
             </button>
@@ -75,23 +80,31 @@ function WatchlistItem({ entry, player, onUpdate, onRemove }) {
   );
 }
 
-function WatchlistPage({ entries, players, onBack, onUpdate, onRemove }) {
+// `slots` maps each player id to the slot they fill (from assignSlots); `limit` is the
+// current format's roster size.
+function MyRosterPage({ entries, players, slots = new Map(), limit, onBack, onUpdate, onRemove }) {
   return (
-    <section className="watchlist-page">
+    <section className="my-roster-page">
       <RosterLink onClick={onBack}>← Back to home</RosterLink>
-      <h1>Watchlist</h1>
+      <h1>My Roster</h1>
+      {limit !== undefined && (
+        <p className="my-roster-count">
+          {entries.length} / {limit} players
+        </p>
+      )}
 
       {entries.length === 0 ? (
-        <p className="watchlist-empty">
-          Your watchlist is empty. Use "Add to Watchlist" on any player card.
+        <p className="my-roster-empty">
+          Your roster is empty. Use "Add to roster" on any eligible player card.
         </p>
       ) : (
-        <ul className="watchlist">
+        <ul className="my-roster-list">
           {entries.map((entry) => (
-            <WatchlistItem
+            <MyRosterItem
               key={entry.id}
               entry={entry}
               player={players.find((p) => p.id === entry.playerId)}
+              slot={slots.get(entry.playerId)}
               onUpdate={onUpdate}
               onRemove={onRemove}
             />
@@ -102,4 +115,4 @@ function WatchlistPage({ entries, players, onBack, onUpdate, onRemove }) {
   );
 }
 
-export default WatchlistPage;
+export default MyRosterPage;

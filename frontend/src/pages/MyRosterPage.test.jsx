@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { expect, test, vi } from "vitest";
-import WatchlistPage from "./WatchlistPage";
+import MyRosterPage from "./MyRosterPage";
 
 const PLAYERS = [
   {
@@ -24,11 +24,11 @@ function renderPage(overrides = {}) {
     onRemove: vi.fn(),
     ...overrides,
   };
-  render(<WatchlistPage {...props} />);
+  render(<MyRosterPage {...props} />);
   return props;
 }
 
-test("renders each watchlisted player with its note", () => {
+test("renders each rostered player with its note", () => {
   // Arrange
   renderPage();
 
@@ -37,12 +37,12 @@ test("renders each watchlisted player with its note", () => {
   expect(screen.getByText("Monitor snaps")).toBeInTheDocument();
 });
 
-test("shows an empty message when nothing is on the watchlist", () => {
+test("shows an empty message when nothing is on the roster", () => {
   // Arrange
   renderPage({ entries: [] });
 
   // Assert
-  expect(screen.getByText(/Your watchlist is empty/)).toBeInTheDocument();
+  expect(screen.getByText(/Your roster is empty/)).toBeInTheDocument();
 });
 
 test("editing a note and saving calls onUpdate with the entry id and new note", async () => {
@@ -72,4 +72,25 @@ test("clicking Remove calls onRemove with the entry id", () => {
   // Assert
   expect(onRemove).toHaveBeenCalledTimes(1);
   expect(onRemove).toHaveBeenCalledWith(1);
+});
+
+test("shows each player's slot and how full the roster is", () => {
+  // Arrange
+  renderPage({ slots: new Map([[7, { id: "QB", label: "QB" }]]), limit: 16 });
+
+  // Assert
+  expect(screen.getByRole("heading", { name: "My Roster" })).toBeInTheDocument();
+  expect(screen.getByText("1 / 16 players")).toBeInTheDocument();
+  expect(screen.getByText("QB", { selector: ".slot" })).toBeInTheDocument();
+  // The slot already says QB, so the position isn't repeated.
+  expect(screen.getAllByText("QB")).toHaveLength(1);
+});
+
+test("shows the position too when the slot doesn't say it", () => {
+  // Arrange
+  renderPage({ slots: new Map([[7, { id: "BN", label: "Bench" }]]), limit: 16 });
+
+  // Assert
+  expect(screen.getByText("Bench", { selector: ".slot" })).toBeInTheDocument();
+  expect(screen.getByText("QB", { selector: ".position" })).toBeInTheDocument();
 });

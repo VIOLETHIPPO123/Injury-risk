@@ -67,14 +67,14 @@ function player(id, position) {
 }
 
 describe("compareCandidates", () => {
-  it("lists a watchlisted RT for an LG", () => {
+  it("lists a rostered RT for an LG", () => {
     const lg = player(1, "LG");
     const rt = player(2, "RT");
 
     expect(compareCandidates(lg, [rt])).toEqual([rt]);
   });
 
-  it("leaves out watchlisted players from other groups", () => {
+  it("leaves out rostered players from other groups", () => {
     const lg = player(1, "LG");
     const qb = player(2, "QB");
     const de = player(3, "DE");

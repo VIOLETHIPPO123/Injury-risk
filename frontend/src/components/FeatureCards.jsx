@@ -11,10 +11,10 @@ const ICONS = {
       <path d="m20 20-4.5-4.5" />
     </>
   ),
-  watchlist: (
+  "my-roster": (
     <>
-      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-      <circle cx="12" cy="12" r="3" />
+      <rect x="5" y="4" width="14" height="17" rx="2" />
+      <path d="M9 3h6v3H9zM9 11h6M9 15h6" />
     </>
   ),
   about: (

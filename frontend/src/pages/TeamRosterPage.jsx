@@ -20,8 +20,7 @@ function TeamRosterContent({
   players,
   onBack,
   onPlayerClick,
-  watchlistedIds = new Set(),
-  onAddToWatchlist,
+  roster,
   unit: initialUnit = "offense",
 }) {
   const [selectedUnit, setSelectedUnit] = useState(initialUnit);
@@ -39,8 +38,7 @@ function TeamRosterContent({
             key={player.id}
             {...player}
             onClick={() => onPlayerClick(player)}
-            isWatchlisted={watchlistedIds.has(player.id)}
-            onAddToWatchlist={onAddToWatchlist}
+            roster={roster}
           />
         ))}
       </div>

@@ -420,3 +420,21 @@ test("without onBack, there is no back link", () => {
 
   expect(screen.queryByText("← Back to home")).not.toBeInTheDocument();
 });
+
+// ---------- Roster badge ----------
+
+test("search results badge rostered players and offer Add to roster to the rest", async () => {
+  const user = userEvent.setup();
+  const roster = { ids: new Set([1]), isFull: false, limit: 16, onAdd: vi.fn() };
+  render(<SearchPage players={PLAYERS} onBack={() => {}} roster={roster} />);
+
+  await user.click(chip("Team", "DAL"));
+
+  const lamb = screen.getByRole("heading", { name: "CeeDee Lamb" }).closest("article");
+  expect(within(lamb).getByText("On my roster")).toBeInTheDocument();
+  const dak = screen.getByRole("heading", { name: "Dak Prescott" }).closest("article");
+  expect(within(dak).getByRole("button", { name: "Add to roster" })).toBeInTheDocument();
+  // Tyler Guyton is an LT, which can't be rostered.
+  const guyton = screen.getByRole("heading", { name: "Tyler Guyton" }).closest("article");
+  expect(within(guyton).queryByRole("button", { name: /roster/i })).not.toBeInTheDocument();
+});

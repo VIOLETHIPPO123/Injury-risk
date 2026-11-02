@@ -490,3 +490,20 @@ test("switching to a different team resets the toggle to offense", () => {
     "true",
   );
 });
+
+test("the formation view badges rostered players and offers Add to roster only to eligible ones", () => {
+  // Arrange — Brissett (QB) is rostered; the offensive linemen can't be rostered.
+  const roster = { ids: new Set([1]), isFull: false, limit: 16, onAdd: vi.fn() };
+  render(
+    <TeamRosterPage team="ARI" players={ARI_STARTERS} onBack={vi.fn()} onPlayerClick={vi.fn()} roster={roster} />,
+  );
+
+  // Assert
+  const brissett = screen.getByRole("heading", { name: "Jacoby Brissett" }).closest("article");
+  expect(within(brissett).getByText("On my roster")).toBeInTheDocument();
+  const conner = screen.getByRole("heading", { name: "James Conner" }).closest("article");
+  expect(within(conner).getByRole("button", { name: "Add to roster" })).toBeInTheDocument();
+  const lineman = ARI_STARTERS.find((p) => p.position === "LT");
+  const ltCard = screen.getByRole("heading", { name: lineman.name }).closest("article");
+  expect(within(ltCard).queryByRole("button", { name: /roster/i })).not.toBeInTheDocument();
+});

@@ -49,15 +49,16 @@ function SideBySide({ player, other, onClear }) {
   );
 }
 
-function ComparePanel({ player, players, watchlistedPlayers, onClose }) {
-  // The chosen player, from the watchlist list or the fallback search.
+// `rosteredPlayers` are the players on the user's roster, each with the `slot` they fill.
+function ComparePanel({ player, players, rosteredPlayers, onClose }) {
+  // The chosen player, from the roster list or the fallback search.
   const [compared, setCompared] = useState(null);
   const comparedId = compared?.id;
   const group = positionGroup(player.position);
-  const candidates = compareCandidates(player, watchlistedPlayers);
+  const candidates = compareCandidates(player, rosteredPlayers);
 
   return (
-    <aside className="compare-panel" aria-label="Compare with watchlist">
+    <aside className="compare-panel" aria-label="Compare with my roster">
       <div className="compare-panel-header">
         <h2>Compare {group}</h2>
         <Button onClick={onClose}>Close</Button>
@@ -83,7 +84,10 @@ function ComparePanel({ player, players, watchlistedPlayers, onClose }) {
               <li key={other.id} className={`risk-${risk.tier}`}>
                 <span className="compare-panel-name">{other.name}</span>
                 <span className="compare-panel-meta">
-                  {other.team} · {other.position}
+                  {/* Like My Roster: skip the position when the slot already says it. */}
+                  {[other.slot?.label, other.team, other.position]
+                    .filter((part, i, parts) => part && (i !== 2 || part !== parts[0]))
+                    .join(" · ")}
                 </span>
                 <span className="compare-panel-acwr">
                   ACWR {acwr === null ? "—" : acwr.toFixed(2)} · {risk.label}
@@ -102,7 +106,7 @@ function ComparePanel({ player, players, watchlistedPlayers, onClose }) {
       ) : (
         <div className="compare-panel-fallback">
           <p className="compare-panel-empty">
-            No other {group} players on your watchlist.
+            No other {group} players on your roster.
           </p>
           <p>Search for a {group} player to compare against instead.</p>
           <SearchPage
@@ -120,7 +124,7 @@ function ComparePanel({ player, players, watchlistedPlayers, onClose }) {
 function PlayerPage({
   player,
   players = [],
-  watchlistedPlayers = [],
+  rosteredPlayers = [],
   onBack,
   backLabel = "Back to team page",
 }) {
@@ -164,7 +168,7 @@ function PlayerPage({
         <ComparePanel
           player={player}
           players={players}
-          watchlistedPlayers={watchlistedPlayers}
+          rosteredPlayers={rosteredPlayers}
           onClose={() => setCompareOpen(false)}
         />
       )}

@@ -18,8 +18,7 @@ const MAX_SUGGESTIONS = 6;
 function SearchPage({
   players = [],
   onBack,
-  watchlistedIds = new Set(),
-  onAddToWatchlist,
+  roster,
   search,
   onSearchChange,
   lockedPositions,
@@ -140,8 +139,7 @@ function SearchPage({
             <PlayerCard
               key={player.id}
               {...player}
-              isWatchlisted={watchlistedIds.has(player.id)}
-              onAddToWatchlist={onAddToWatchlist}
+              roster={roster}
               onClick={onSelectPlayer && (() => onSelectPlayer(player))}
             />
           ))}
