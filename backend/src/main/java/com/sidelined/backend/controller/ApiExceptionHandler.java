@@ -1,6 +1,7 @@
 package com.sidelined.backend.controller;
 
 import com.sidelined.backend.exception.PlayerNotFoundException;
+import com.sidelined.backend.exception.UnknownRosterFormatException;
 import com.sidelined.backend.exception.WatchlistEntryNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,6 +17,12 @@ public class ApiExceptionHandler {
     @ExceptionHandler({PlayerNotFoundException.class, WatchlistEntryNotFoundException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Map<String, String> handleNotFound(RuntimeException ex) {
+        return Map.of("error", ex.getMessage());
+    }
+
+    @ExceptionHandler(UnknownRosterFormatException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Map<String, String> handleBadRequest(RuntimeException ex) {
         return Map.of("error", ex.getMessage());
     }
 }

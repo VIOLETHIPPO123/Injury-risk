@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, test, vi } from "vitest";
 import MyRosterPage from "./MyRosterPage";
 import { assignSlots } from "../utils/rosterFormats";
+import { lineupFormat, LINEUP_FORMATS } from "../utils/rosterFormats.fixture";
 
 // ACWR = last game ÷ (last four ÷ 4).
 const player = (id, name, position, snapsLastGame = 60, snapsLast4Games = 240) => ({
@@ -15,13 +16,14 @@ const LAMB = player(10, "CeeDee Lamb", "WR");
 const entry = (id, playerId, note = "") => ({ id, playerId, note });
 
 // Renders the page the way App does: slots come from assignSlots for the format.
-function renderPage({ formatId = "standard", roster = [PRESCOTT], assignments = {}, notes = {}, ...overrides } = {}) {
+function renderPage({ formatId = "espn-standard", roster = [PRESCOTT], assignments = {}, notes = {}, ...overrides } = {}) {
   const entries = roster.map((p, i) => entry(i + 1, p.id, notes[p.id] ?? ""));
   const props = {
     entries,
     players: roster,
+    formats: LINEUP_FORMATS,
     formatId,
-    slots: assignSlots(formatId, roster, assignments),
+    slots: assignSlots(lineupFormat(formatId), roster, assignments),
     limit: 16,
     onFormatChange: vi.fn(),
     onMove: vi.fn(),
@@ -37,7 +39,7 @@ function renderPage({ formatId = "standard", roster = [PRESCOTT], assignments = 
 function slotLabels(listName) {
   const list = screen.getByRole("list", { name: listName });
   return within(list)
-    .getAllByRole("listitem")
+    .queryAllByRole("listitem")
     .map((li) => li.querySelector(".slot").textContent);
 }
 
@@ -90,10 +92,10 @@ test("shows how full the roster is, and each player's risk tier", () => {
 // ---------- Layout per format ----------
 
 describe("the lineup matches the selected format", () => {
-  test("Standard: 9 starting slots, 7 bench spots and 1 IR, empty ones shown as open", () => {
-    renderPage({ formatId: "standard", roster: [PRESCOTT] });
+  test("ESPN Standard: 9 starting slots, 7 bench spots and 1 IR, empty ones shown as open", () => {
+    renderPage({ formatId: "espn-standard", roster: [PRESCOTT] });
 
-    expect(slotLabels("Starters")).toEqual(["QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "K", "D/ST"]);
+    expect(slotLabels("Starters")).toEqual(["QB", "RB", "RB", "WR", "WR", "TE", "K", "DEF", "FLEX"]);
     expect(openCount("Starters")).toBe(8);
     expect(slotLabels("Bench")).toHaveLength(7);
     expect(openCount("Bench")).toBe(7);
@@ -101,22 +103,20 @@ describe("the lineup matches the selected format", () => {
     expect(openCount("IR")).toBe(1);
   });
 
-  test("Superflex: adds a SUPERFLEX slot and has 6 bench spots", () => {
-    renderPage({ formatId: "superflex", roster: [] });
+  test("Yahoo Standard: 9 starting slots, 6 bench spots and 2 IR", () => {
+    renderPage({ formatId: "yahoo-standard", roster: [] });
 
-    expect(slotLabels("Starters")).toEqual([
-      "QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "SUPERFLEX", "K", "D/ST",
-    ]);
+    expect(slotLabels("Starters")).toEqual(["QB", "RB", "RB", "WR", "WR", "TE", "K", "DEF", "FLEX"]);
     expect(slotLabels("Bench")).toHaveLength(6);
-    expect(slotLabels("IR")).toHaveLength(1);
+    expect(slotLabels("IR")).toHaveLength(2);
   });
 
-  test("2-QB: two QB slots and 6 bench spots", () => {
-    renderPage({ formatId: "two-qb", roster: [] });
+  test("Sleeper Default: two FLEX slots, 5 bench spots and no IR", () => {
+    renderPage({ formatId: "sleeper-default", roster: [] });
 
-    expect(slotLabels("Starters")).toEqual(["QB", "QB", "RB", "RB", "WR", "WR", "TE", "FLEX", "K", "D/ST"]);
-    expect(slotLabels("Bench")).toHaveLength(6);
-    expect(slotLabels("IR")).toHaveLength(1);
+    expect(slotLabels("Starters")).toEqual(["QB", "RB", "RB", "WR", "WR", "TE", "K", "DEF", "FLEX", "FLEX"]);
+    expect(slotLabels("Bench")).toHaveLength(5);
+    expect(slotLabels("IR")).toHaveLength(0);
   });
 
   test("a benched player fills a bench spot, and the position shows when the slot doesn't say it", () => {
@@ -175,29 +175,43 @@ describe("moving players", () => {
 // ---------- Changing the format ----------
 
 describe("changing the format", () => {
+  test("lists the three formats from the backend", () => {
+    renderPage();
+
+    const options = within(screen.getByLabelText("Format")).getAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual(["ESPN Standard", "Yahoo Standard", "Sleeper Default"]);
+  });
+
+  test("shows a loading message until the formats arrive", () => {
+    renderPage({ formats: [] });
+
+    expect(screen.getByText("Loading roster formats…")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Format")).not.toBeInTheDocument();
+  });
+
   test("asks for confirmation that every player will move to the bench", () => {
     const { onFormatChange } = renderPage();
 
-    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "superflex" } });
+    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "yahoo-standard" } });
 
     const dialog = screen.getByRole("alertdialog", { name: "Change format" });
-    expect(dialog).toHaveTextContent("Switching to Superflex moves every player to the bench.");
+    expect(dialog).toHaveTextContent("Switching to Yahoo Standard moves every player to the bench.");
     expect(onFormatChange).not.toHaveBeenCalled();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Switch format" }));
-    expect(onFormatChange).toHaveBeenCalledWith("superflex");
+    expect(onFormatChange).toHaveBeenCalledWith("yahoo-standard");
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
   });
 
   test("Cancel keeps the current format", () => {
     const { onFormatChange } = renderPage();
 
-    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "two-qb" } });
+    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "sleeper-default" } });
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(onFormatChange).not.toHaveBeenCalled();
     expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
-    expect(screen.getByLabelText("Format")).toHaveValue("standard");
+    expect(screen.getByLabelText("Format")).toHaveValue("espn-standard");
   });
 });
 

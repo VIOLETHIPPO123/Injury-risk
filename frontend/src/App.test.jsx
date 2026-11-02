@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, test, vi } from "vitest";
 import App from "./App";
 import { getPlayers } from "./services/playerService";
+import { API_ROSTER_FORMATS } from "./utils/rosterFormats.fixture";
 
 vi.mock("./services/playerService", () => ({
   getPlayers: vi.fn(),
@@ -29,10 +30,13 @@ function jsonResponse(status, body) {
 
 // What the roster endpoint (GET /watchlist on the backend) returns when the app loads. Tests that start with entries overwrite it.
 let savedEntries = [];
+// The league's format, as GET /roster/settings returns it. PUT /roster/settings changes it.
+let savedFormatId = "espn-standard";
 
 // A fake backend for the roster CRUD endpoints. Players come from the mocked playerService above.
 beforeEach(() => {
   savedEntries = [];
+  savedFormatId = "espn-standard";
   vi.stubGlobal(
     "fetch",
     vi.fn((url, options = {}) => {
@@ -49,6 +53,12 @@ beforeEach(() => {
         return jsonResponse(200, { ...existing, ...JSON.parse(options.body) });
       }
       if (id && method === "DELETE") return jsonResponse(204);
+      if (url.endsWith("/roster/formats")) return jsonResponse(200, API_ROSTER_FORMATS);
+      if (url.endsWith("/roster/settings") && method === "PUT") {
+        savedFormatId = JSON.parse(options.body).formatId;
+        return jsonResponse(200, { formatId: savedFormatId });
+      }
+      if (url.endsWith("/roster/settings")) return jsonResponse(200, { formatId: savedFormatId });
       if (url.endsWith("/injuries")) return jsonResponse(200, []);
       if (url.endsWith("/workload")) return jsonResponse(200, []);
       throw new Error(`Unexpected request: ${method} ${url}`);
@@ -505,14 +515,38 @@ describe("the lineup on My Roster", () => {
     expect(listText("Bench")).toContain("Back One");
   });
 
-  test("switching format after confirming moves every player to the bench", async () => {
+  test("switching format after confirming saves it and moves every player to the bench", async () => {
     await openLineup();
 
-    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "two-qb" } });
+    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "sleeper-default" } });
     fireEvent.click(screen.getByRole("button", { name: "Switch format" }));
 
-    expect(screen.getByLabelText("Format")).toHaveValue("two-qb");
+    await waitFor(() => expect(screen.getByLabelText("Format")).toHaveValue("sleeper-default"));
+    expect(savedFormatId).toBe("sleeper-default");
     expect(within(screen.getByRole("list", { name: "Starters" })).getAllByText("Open")).toHaveLength(10);
     for (const p of RBS) expect(listText("Bench")).toContain(p.name);
+  });
+
+  test("loads the league's saved format", async () => {
+    savedFormatId = "yahoo-standard";
+    await openLineup();
+
+    expect(screen.getByLabelText("Format")).toHaveValue("yahoo-standard");
+    expect(screen.getByText("4 / 15 players")).toBeInTheDocument();
+  });
+
+  test("a rejected format change shows the error and keeps the current format", async () => {
+    await openLineup();
+    fetch.mockImplementationOnce(() =>
+      Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({}) }),
+    );
+
+    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "sleeper-default" } });
+    fireEvent.click(screen.getByRole("button", { name: "Switch format" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Roster error: PUT /roster/settings failed with status 400",
+    );
+    expect(screen.getByLabelText("Format")).toHaveValue("espn-standard");
   });
 });

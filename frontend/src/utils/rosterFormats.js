@@ -1,82 +1,56 @@
-// Fantasy roster formats: the starting slots (each listing the positions allowed in it),
-// then how many bench and IR spots there are. The roster limit is starters + bench.
-// The data calls kickers "PK" and fullbacks "FB" (who play as running backs).
-const QB = ["QB"];
-const RB = ["RB", "FB"];
-const WR = ["WR"];
-const TE = ["TE"];
-const K = ["PK"];
-const DST = ["D/ST"];
-const FLEX = [...RB, ...WR, ...TE];
-const SUPERFLEX = [...QB, ...FLEX];
+// Fantasy roster formats come from the backend (GET /roster/formats). toLineupFormat turns
+// one into what the lineup needs: one starting slot per spot (each listing the positions
+// allowed in it), then how many bench and IR spots there are.
+
+// The player data's positions for each roster position: kickers are "PK" and fullbacks
+// "FB" (who play as running backs). DEF is a whole team's unit, so no player fills it.
+const PLAYER_POSITIONS = {
+  QB: ["QB"],
+  RB: ["RB", "FB"],
+  WR: ["WR"],
+  TE: ["TE"],
+  K: ["PK"],
+  DEF: ["D/ST"],
+};
 
 const slot = (id, label, allowed) => ({ id, label, allowed });
 
-export const ROSTER_FORMATS = {
-  standard: {
-    label: "Standard",
-    starters: [
-      slot("QB", "QB", QB),
-      slot("RB1", "RB", RB),
-      slot("RB2", "RB", RB),
-      slot("WR1", "WR", WR),
-      slot("WR2", "WR", WR),
-      slot("TE", "TE", TE),
-      slot("FLEX", "FLEX", FLEX),
-      slot("K", "K", K),
-      slot("DST", "D/ST", DST),
-    ],
-    bench: 7,
-    ir: 1,
-  },
-  superflex: {
-    label: "Superflex",
-    starters: [
-      slot("QB", "QB", QB),
-      slot("RB1", "RB", RB),
-      slot("RB2", "RB", RB),
-      slot("WR1", "WR", WR),
-      slot("WR2", "WR", WR),
-      slot("TE", "TE", TE),
-      slot("FLEX", "FLEX", FLEX),
-      slot("SFLEX", "SUPERFLEX", SUPERFLEX),
-      slot("K", "K", K),
-      slot("DST", "D/ST", DST),
-    ],
-    bench: 6,
-    ir: 1,
-  },
-  "two-qb": {
-    label: "2-QB",
-    starters: [
-      slot("QB1", "QB", QB),
-      slot("QB2", "QB", QB),
-      slot("RB1", "RB", RB),
-      slot("RB2", "RB", RB),
-      slot("WR1", "WR", WR),
-      slot("WR2", "WR", WR),
-      slot("TE", "TE", TE),
-      slot("FLEX", "FLEX", FLEX),
-      slot("K", "K", K),
-      slot("DST", "D/ST", DST),
-    ],
-    bench: 6,
-    ir: 1,
-  },
-};
+// A slot with a count of 2 becomes two spots, e.g. RB1 and RB2; a count of 1 keeps its name.
+export function toLineupFormat(format) {
+  const starters = format.slots.flatMap((s) =>
+    Array.from({ length: s.count }, (_, i) =>
+      slot(
+        s.count > 1 ? `${s.name}${i + 1}` : s.name,
+        s.name,
+        s.positions.flatMap((p) => PLAYER_POSITIONS[p] ?? []),
+      ),
+    ),
+  );
+  return {
+    id: format.id,
+    label: format.name,
+    starters,
+    bench: format.benchCount,
+    ir: format.irCount,
+    limit: format.maxRosterSize,
+  };
+}
 
-export const DEFAULT_FORMAT = "standard";
+// The backend's default too, so the two agree before the settings have loaded.
+export const DEFAULT_FORMAT = "espn-standard";
 
-// Positions a player can be rostered at. D/ST is a whole team's unit, not a player.
-const ELIGIBLE_POSITIONS = new Set([...SUPERFLEX, ...K]);
+// Positions a player can be rostered at.
+const ELIGIBLE_POSITIONS = new Set(
+  ["QB", "RB", "WR", "TE", "K"].flatMap((p) => PLAYER_POSITIONS[p]),
+);
 
 export function isRosterEligible(position) {
   return ELIGIBLE_POSITIONS.has(position);
 }
 
-export function rosterLimit(formatId) {
-  const format = ROSTER_FORMATS[formatId];
-  return format.starters.length + format.bench;
+// Starters and bench; IR spots are on top of it.
+export function rosterLimit(format) {
+  return format.limit;
 }
 
 // The bench and IR take any rostered player. The bench holds `format.bench` players and
@@ -90,10 +64,10 @@ export function isStarterSlot(slot) {
 
 // Whether `position` may be moved into the slot with this id. IR is limited to
 // `format.ir` players, so `irFull` says whether it already is (by someone else).
-export function canMoveTo(formatId, slotId, position, { irFull = false } = {}) {
+export function canMoveTo(format, slotId, position, { irFull = false } = {}) {
   if (slotId === BENCH.id) return true;
   if (slotId === IR.id) return !irFull;
-  const slot = ROSTER_FORMATS[formatId].starters.find((s) => s.id === slotId);
+  const slot = format.starters.find((s) => s.id === slotId);
   return Boolean(slot?.allowed.includes(position));
 }
 
@@ -101,8 +75,7 @@ export function canMoveTo(formatId, slotId, position, { irFull = false } = {}) {
 // made; any that still fit the format are kept. Everyone else, in the order given, gets
 // the first open starting slot their position is allowed in, otherwise the bench.
 // Returns a Map of player id -> slot.
-export function assignSlots(formatId, players, assignments = {}) {
-  const format = ROSTER_FORMATS[formatId];
+export function assignSlots(format, players, assignments = {}) {
   const open = [...format.starters];
   const slots = new Map();
   let irCount = 0;

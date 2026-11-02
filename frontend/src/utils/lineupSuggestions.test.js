@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { benchSuggestions } from "./lineupSuggestions";
-import { BENCH, ROSTER_FORMATS } from "./rosterFormats";
+import { BENCH } from "./rosterFormats";
+import { lineupFormat } from "./rosterFormats.fixture";
 
-const slot = (id) => ROSTER_FORMATS.standard.starters.find((s) => s.id === id);
+const slot = (id) => lineupFormat("espn-standard").starters.find((s) => s.id === id);
 // ACWR = last game ÷ (last four ÷ 4).
 const player = (id, name, position, snapsLastGame, inSlot) => ({
   id, name, position, snapsLastGame, snapsLast4Games: 200, slot: inSlot,
