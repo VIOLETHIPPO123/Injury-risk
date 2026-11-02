@@ -19,15 +19,12 @@ import {
   removeFromRoster,
 } from "./services/rosterService";
 import { EMPTY_SEARCH } from "./utils/filterPlayers";
-import { assignSlots, DEFAULT_FORMAT, rosterLimit } from "./utils/rosterFormats";
+import { assignSlots, BENCH, DEFAULT_FORMAT, rosterLimit } from "./utils/rosterFormats";
 import "./App.css";
 import Header from "./components/Header";
 
 // Roughly when the header's title animation finishes; the homepage bars start rising then.
 const TITLE_INTRO_MS = 1300;
-
-// The roster format in use. The lineup view (DEV-88) adds a picker to change it.
-const ROSTER_FORMAT = DEFAULT_FORMAT;
 
 function App() {
   const [view, setView] = useState("home");
@@ -43,6 +40,10 @@ function App() {
   const [error, setError] = useState(null);
   const [roster, setRoster] = useState([]);
   const [rosterError, setRosterError] = useState(null);
+  const [rosterFormat, setRosterFormat] = useState(DEFAULT_FORMAT);
+  // The lineup moves the user has made: player id -> slot id. Players without one are
+  // placed automatically (see assignSlots).
+  const [assignments, setAssignments] = useState({});
   // Lives here, not in SearchPage, so the query and chips survive leaving the page.
   const [search, setSearch] = useState(EMPTY_SEARCH);
 
@@ -90,13 +91,31 @@ function App() {
   }
 
   // Slots go to players in the order they were added (entry ids are assigned in that order).
-  const limit = rosterLimit(ROSTER_FORMAT);
+  const limit = rosterLimit(rosterFormat);
   const rosterPlayers = [...roster]
     .sort((a, b) => a.id - b.id)
     .map((entry) => players.find((p) => p.id === entry.playerId))
     .filter(Boolean);
-  const slots = assignSlots(ROSTER_FORMAT, rosterPlayers);
+  const slots = assignSlots(rosterFormat, rosterPlayers, assignments);
   const rosteredPlayers = rosterPlayers.map((p) => ({ ...p, slot: slots.get(p.id) }));
+
+  // Pins everyone to their current slot before applying the move, so benching one RB
+  // doesn't let the automatic placement promote a different bench RB in their place.
+  // A player already in the target starting slot goes to the bench.
+  function handleMove(playerId, slotId) {
+    const next = Object.fromEntries(rosterPlayers.map((p) => [p.id, slots.get(p.id).id]));
+    const occupant = rosterPlayers.find(
+      (p) => p.id !== playerId && slots.get(p.id).id === slotId && slotId !== BENCH.id,
+    );
+    if (occupant) next[occupant.id] = BENCH.id;
+    next[playerId] = slotId;
+    setAssignments(next);
+  }
+
+  function handleFormatChange(formatId) {
+    setRosterFormat(formatId);
+    setAssignments(Object.fromEntries(rosterPlayers.map((p) => [p.id, BENCH.id])));
+  }
 
   // Each handler updates local state from the backend's response instead of re-fetching the list.
   function handleAddToRoster(playerId) {
@@ -122,8 +141,13 @@ function App() {
 
   function handleRemoveFromRoster(id) {
     setRosterError(null);
+    const playerId = roster.find((e) => e.id === id)?.playerId;
     removeFromRoster(id)
-      .then(() => setRoster((prev) => prev.filter((e) => e.id !== id)))
+      .then(() => {
+        setRoster((prev) => prev.filter((e) => e.id !== id));
+        // Forget their slot so re-adding them later places them afresh.
+        setAssignments(({ [playerId]: _removed, ...rest }) => rest);
+      })
       .catch((err) => setRosterError(err.message));
   }
 
@@ -177,8 +201,11 @@ function App() {
       <MyRosterPage
         entries={roster}
         players={players}
+        formatId={rosterFormat}
         slots={slots}
         limit={limit}
+        onFormatChange={handleFormatChange}
+        onMove={handleMove}
         onBack={() => setView("home")}
         onUpdate={handleUpdateRosterEntry}
         onRemove={handleRemoveFromRoster}

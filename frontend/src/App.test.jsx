@@ -467,3 +467,50 @@ describe("roster limits and errors", () => {
     expect(screen.getByText("Add to roster")).toBeEnabled();
   });
 });
+
+describe("the lineup on My Roster", () => {
+  const rb = (id, name) => ({ id, name, team: "DAL", position: "RB", snapsLastGame: 50, snapsLast4Games: 200 });
+  // Added in this order, they fill RB, RB, FLEX, then the bench.
+  const RBS = [rb(1, "Back One"), rb(2, "Back Two"), rb(3, "Back Three"), rb(4, "Back Four")];
+
+  async function openLineup() {
+    savedEntries = RBS.map((p) => ({ id: p.id, playerId: p.id, note: "" }));
+    await renderHome(RBS);
+    await openMyRosterPage();
+    await screen.findByText("Back Four");
+  }
+
+  const listText = (name) => screen.getByRole("list", { name }).textContent;
+
+  test("benching a starter leaves their slot open instead of promoting another bench player", async () => {
+    await openLineup();
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Move Back One" }), { target: { value: "BN" } });
+
+    const starters = within(screen.getByRole("list", { name: "Starters" }));
+    expect(starters.queryByText("Back One")).not.toBeInTheDocument();
+    expect(starters.queryByText("Back Four")).not.toBeInTheDocument();
+    expect(listText("Bench")).toContain("Back One");
+    expect(listText("Bench")).toContain("Back Four");
+  });
+
+  test("moving a player into an occupied slot sends that slot's player to the bench", async () => {
+    await openLineup();
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Move Back Four" }), { target: { value: "RB1" } });
+
+    expect(listText("Starters")).toContain("Back Four");
+    expect(listText("Bench")).toContain("Back One");
+  });
+
+  test("switching format after confirming moves every player to the bench", async () => {
+    await openLineup();
+
+    fireEvent.change(screen.getByLabelText("Format"), { target: { value: "two-qb" } });
+    fireEvent.click(screen.getByRole("button", { name: "Switch format" }));
+
+    expect(screen.getByLabelText("Format")).toHaveValue("two-qb");
+    expect(within(screen.getByRole("list", { name: "Starters" })).getAllByText("Open")).toHaveLength(10);
+    for (const p of RBS) expect(listText("Bench")).toContain(p.name);
+  });
+});

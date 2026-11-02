@@ -2,15 +2,17 @@ import { describe, expect, it } from "vitest";
 import {
   assignSlots,
   BENCH,
+  canMoveTo,
   DEFAULT_FORMAT,
+  IR,
   isRosterEligible,
   ROSTER_FORMATS,
   rosterLimit,
 } from "./rosterFormats";
 
 const player = (id, position) => ({ id, position });
-const slotLabels = (formatId, players) => {
-  const slots = assignSlots(formatId, players);
+const slotLabels = (formatId, players, assignments = {}) => {
+  const slots = assignSlots(formatId, players, assignments);
   return players.map((p) => slots.get(p.id).label);
 };
 
@@ -72,5 +74,54 @@ describe("assignSlots", () => {
 
   it("treats a fullback as a running back", () => {
     expect(slotLabels("standard", [player(1, "FB")])).toEqual(["RB"]);
+  });
+});
+
+describe("assignSlots with the user's moves", () => {
+  it("keeps a move that fits the format, and fills around it", () => {
+    const players = [player(1, "RB"), player(2, "RB")];
+
+    // Player 1 was moved to FLEX, so player 2 takes the first RB slot.
+    expect(slotLabels("standard", players, { 1: "FLEX" })).toEqual(["FLEX", "RB"]);
+  });
+
+  it("keeps players on the bench and IR", () => {
+    const players = [player(1, "QB"), player(2, "WR")];
+    const slots = assignSlots("standard", players, { 1: "BN", 2: "IR" });
+
+    expect(slots.get(1)).toBe(BENCH);
+    expect(slots.get(2)).toBe(IR);
+  });
+
+  it("ignores a move into a slot the position isn't allowed in", () => {
+    expect(slotLabels("standard", [player(1, "QB")], { 1: "RB1" })).toEqual(["QB"]);
+  });
+
+  it("ignores a move into a slot the format doesn't have", () => {
+    expect(slotLabels("standard", [player(1, "QB")], { 1: "SFLEX" })).toEqual(["QB"]);
+  });
+
+  it("only lets as many players onto IR as the format allows", () => {
+    const players = [player(1, "WR"), player(2, "WR")];
+    const slots = assignSlots("standard", players, { 1: "IR", 2: "IR" });
+
+    expect(slots.get(1)).toBe(IR);
+    expect(slots.get(2)).not.toBe(IR);
+  });
+});
+
+describe("canMoveTo", () => {
+  it("allows a starting slot only for positions listed in it", () => {
+    expect(canMoveTo("standard", "RB1", "FB")).toBe(true);
+    expect(canMoveTo("standard", "RB1", "QB")).toBe(false);
+    expect(canMoveTo("standard", "FLEX", "TE")).toBe(true);
+    expect(canMoveTo("superflex", "SFLEX", "QB")).toBe(true);
+    expect(canMoveTo("standard", "SFLEX", "QB")).toBe(false);
+  });
+
+  it("always allows the bench, and IR until it's full", () => {
+    expect(canMoveTo("standard", "BN", "QB")).toBe(true);
+    expect(canMoveTo("standard", "IR", "QB")).toBe(true);
+    expect(canMoveTo("standard", "IR", "QB", { irFull: true })).toBe(false);
   });
 });
