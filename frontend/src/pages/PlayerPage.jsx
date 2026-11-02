@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import AcwrTrendChart from "../components/AcwrTrendChart";
 import Button from "../components/Button";
 import InjuryHistory from "../components/InjuryHistory";
 import RosterLink from "../components/RosterLink";
 import { getInjuries } from "../services/injuryService";
+import { getWorkload } from "../services/workloadService";
 import { calculateAcwr, riskLevel } from "../utils/acwr";
 import { compareVerdict, comparisonRows } from "../utils/comparison";
 import {
@@ -12,6 +14,33 @@ import {
 } from "../utils/positionGroup";
 import SearchPage from "./SearchPage";
 import "./PlayerPage.css";
+
+// Loads one player's data with `load(playerId)`: { data, error }, data null while loading.
+// Tagged with the player it belongs to, so a previous player's data never shows.
+function usePlayerData(load, playerId) {
+  const [state, setState] = useState({ playerId: null, data: null, error: null });
+
+  useEffect(() => {
+    if (playerId === undefined) return;
+    // Ignore a response that arrives after the page moved on to another player.
+    let ignore = false;
+
+    load(playerId)
+      .then((data) => {
+        if (!ignore) setState({ playerId, data, error: null });
+      })
+      .catch((err) => {
+        if (!ignore) setState({ playerId, data: null, error: err.message });
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [load, playerId]);
+
+  const current = state.playerId === playerId;
+  return { data: current ? state.data : null, error: current ? state.error : null };
+}
 
 function SideBySide({ player, other, onClear }) {
   const rows = comparisonRows(player, other);
@@ -131,29 +160,9 @@ function PlayerPage({
   backLabel = "Back to team page",
 }) {
   const [compareOpen, setCompareOpen] = useState(false);
-  // Tagged with the player it belongs to, so a previous player's injuries never show.
-  const [injuryHistory, setInjuryHistory] = useState({ playerId: null, injuries: null, error: null });
   const playerId = player?.id;
-
-  useEffect(() => {
-    if (playerId === undefined) return;
-    // Ignore a response that arrives after the page moved on to another player.
-    let ignore = false;
-
-    getInjuries(playerId)
-      .then((injuries) => {
-        if (!ignore) setInjuryHistory({ playerId, injuries, error: null });
-      })
-      .catch((err) => {
-        if (!ignore) setInjuryHistory({ playerId, injuries: null, error: err.message });
-      });
-
-    return () => {
-      ignore = true;
-    };
-  }, [playerId]);
-
-  const current = injuryHistory.playerId === playerId;
+  const injuries = usePlayerData(getInjuries, playerId);
+  const workload = usePlayerData(getWorkload, playerId);
 
   if (!player) {
     return (
@@ -220,10 +229,9 @@ function PlayerPage({
         </div>
       </dl>
 
-      <InjuryHistory
-        injuries={current ? injuryHistory.injuries : null}
-        error={current ? injuryHistory.error : null}
-      />
+      <AcwrTrendChart games={workload.data} error={workload.error} />
+
+      <InjuryHistory injuries={injuries.data} error={injuries.error} />
 
       <p className="player-page-note">
         Note: ACWR (Acute:Chronic Workload Ratio) compares the most recent
