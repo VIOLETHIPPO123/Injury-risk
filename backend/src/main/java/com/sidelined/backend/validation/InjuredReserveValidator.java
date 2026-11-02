@@ -11,8 +11,6 @@ import org.springframework.stereotype.Component;
 @Order(3)
 public class InjuredReserveValidator implements SlotMoveValidator {
 
-    private static final String ACTIVE = "Active";
-
     private final InjuryRepository injuryRepository;
 
     public InjuredReserveValidator(InjuryRepository injuryRepository) {
@@ -21,12 +19,7 @@ public class InjuredReserveValidator implements SlotMoveValidator {
 
     @Override
     public void validate(RosterEntry entry, String slot) {
-        if (!RosterEntry.IR.equals(slot)) {
-            return;
-        }
-        boolean activelyInjured = injuryRepository.findByPlayerId(entry.getPlayerId()).stream()
-            .anyMatch(injury -> ACTIVE.equals(injury.status()));
-        if (!activelyInjured) {
+        if (RosterEntry.IR.equals(slot) && !injuryRepository.hasActiveInjury(entry.getPlayerId())) {
             throw new NoActiveInjuryException(entry.getPlayerId());
         }
     }

@@ -8,7 +8,7 @@ const injury = (season, week, bodyPart, type, gamesMissed, status) => ({
 
 // Newest first, as GET /players/{id}/injuries returns them.
 const MCCAFFREY = [
-  injury(2026, 6, "Calf", "Strain", 1, "Questionable"),
+  injury(2026, 6, "Calf", "Strain", 1, "Recovering"),
   injury(2025, 9, "Hamstring", "Strain", 2, "Recovered"),
   injury(2024, 1, "Achilles", "Tendinitis", 8, "Recovered"),
   injury(2023, 5, "Hamstring", "Strain", 1, "Recovered"),
@@ -37,9 +37,9 @@ test("a player with no injuries shows No recorded injuries", () => {
 });
 
 test("one injury shows every field in a single row, with a summary and no warning", () => {
-  render(<InjuryHistory injuries={[injury(2026, 4, "Ankle", "Sprain", 1, "Questionable")]} />);
+  render(<InjuryHistory injuries={[injury(2026, 4, "Ankle", "Sprain", 1, "Recovering")]} />);
 
-  expect(tableRows()).toEqual([["2026", "4", "Ankle", "Sprain", "1", "Questionable"]]);
+  expect(tableRows()).toEqual([["2026", "4", "Ankle", "Sprain", "1", "Recovering"]]);
   expect(screen.getByText("1 injury in 1 season.")).toBeInTheDocument();
   expect(screen.queryByRole("note", { name: "Repeat injuries" })).not.toBeInTheDocument();
 });
@@ -57,7 +57,7 @@ test("lists injuries in the order and with the fields the API sent", () => {
   render(<InjuryHistory injuries={MCCAFFREY} />);
 
   expect(tableRows()).toEqual([
-    ["2026", "6", "Calf", "Strain", "1", "Questionable"],
+    ["2026", "6", "Calf", "Strain", "1", "Recovering"],
     ["2025", "9", "Hamstring", "Strain", "2", "Recovered"],
     ["2024", "1", "Achilles", "Tendinitis", "8", "Recovered"],
     ["2023", "5", "Hamstring", "Strain", "1", "Recovered"],

@@ -18,7 +18,7 @@ afterEach(() => {
 });
 
 test("getInjuries GETs the player's injuries and returns them as sent", async () => {
-  const injuries = [{ season: 2026, week: 4, bodyPart: "Ankle", type: "Sprain", gamesMissed: 1, status: "Questionable" }];
+  const injuries = [{ season: 2026, week: 4, bodyPart: "Ankle", type: "Sprain", gamesMissed: 1, status: "Recovering" }];
   mockFetchResponse(200, injuries);
 
   const result = await getInjuries(92);
