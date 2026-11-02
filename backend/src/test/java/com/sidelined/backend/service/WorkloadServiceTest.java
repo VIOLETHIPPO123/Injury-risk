@@ -1,7 +1,7 @@
 package com.sidelined.backend.service;
 
 import com.sidelined.backend.exception.PlayerNotFoundException;
-import com.sidelined.backend.model.WeeklySnaps;
+import com.sidelined.backend.model.WorkloadEntry;
 import com.sidelined.backend.repository.PlayerRepository;
 import com.sidelined.backend.repository.WorkloadRepository;
 import org.junit.jupiter.api.Test;
@@ -20,12 +20,12 @@ class WorkloadServiceTest {
     @Test
     void getWorkload_knownPlayer_returnsTheRepositoryHistory() {
         // Arrange
-        List<WeeklySnaps> history = List.of(WeeklySnaps.game(1, 50), WeeklySnaps.bye(2));
+        List<WorkloadEntry> history = List.of(new WorkloadEntry(1L, 1, 50), new WorkloadEntry(1L, 3, 55));
         when(playerRepository.existsById(1L)).thenReturn(true);
         when(workloadRepository.findByPlayerId(1L)).thenReturn(history);
 
         // Act
-        List<WeeklySnaps> result = workloadService.getWorkload(1L);
+        List<WorkloadEntry> result = workloadService.getWorkload(1L);
 
         // Assert
         assertEquals(history, result);

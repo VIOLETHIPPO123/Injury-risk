@@ -30,18 +30,28 @@ export function acwrDistance(acwr) {
   return acwr === null ? null : Math.abs(acwr - 1);
 }
 
-// One ACWR per week from a player's history ([{ week, snaps }], oldest first, snaps null on
-// a bye week). Each game is scored the way calculateAcwr scores the player page: that game's
-// snaps against the average of the last four games, including it. It counts games, not
-// weeks, so a bye is skipped instead of counting as 0, and its acwr is null (a gap). Games
-// before the player has four have a null acwr too.
-export function weeklyAcwr(history) {
-  const games = [];
-  return history.map(({ week, snaps }) => {
-    if (snaps === null) return { week, snaps, acwr: null };
-    games.push(snaps);
-    if (games.length < 4) return { week, snaps, acwr: null };
-    const lastFour = games.slice(-4).reduce((sum, s) => sum + s, 0);
-    return { week, snaps, acwr: calculateAcwr(snaps, lastFour) };
-  });
+// One ACWR per week from a player's games ([{ week, snaps }] in week order, as
+// GET /players/{id}/workload sends them; a bye week has no entry). Returns every week from
+// 1 to the latest game. Each game is scored the way calculateAcwr scores the player page:
+// that game's snaps against the average of the last four games, including it. It counts
+// games, not weeks, so a bye is skipped instead of counting as 0: the bye comes back as
+// { week, snaps: null, acwr: null }, a gap. Games before the player has four have a null
+// acwr too.
+export function weeklyAcwr(games) {
+  const snapsByWeek = new Map(games.map(({ week, snaps }) => [week, snaps]));
+  const lastWeek = Math.max(0, ...snapsByWeek.keys());
+  const played = [];
+  const weeks = [];
+
+  for (let week = 1; week <= lastWeek; week++) {
+    if (!snapsByWeek.has(week)) {
+      weeks.push({ week, snaps: null, acwr: null });
+      continue;
+    }
+    const snaps = snapsByWeek.get(week);
+    played.push(snaps);
+    const lastFour = played.length >= 4 ? played.slice(-4).reduce((sum, s) => sum + s, 0) : null;
+    weeks.push({ week, snaps, acwr: lastFour === null ? null : calculateAcwr(snaps, lastFour) });
+  }
+  return weeks;
 }

@@ -17,8 +17,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test("getWorkload GETs the player's weekly snaps and returns them as sent", async () => {
-  const weeks = [{ week: 1, snaps: 60 }, { week: 2, snaps: null }];
+test("getWorkload GETs the player's games and returns them as sent", async () => {
+  const weeks = [{ playerId: 1, week: 1, snaps: 60 }, { playerId: 1, week: 3, snaps: 55 }];
   mockFetchResponse(200, weeks);
 
   const result = await getWorkload(1);
