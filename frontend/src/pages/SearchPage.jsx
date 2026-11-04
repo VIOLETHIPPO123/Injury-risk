@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import SearchBar from "../components/SearchBar";
 import FilterChips from "../components/FilterChips";
 import PlayerCard from "../components/PlayerCard";
-import RosterLink from "../components/RosterLink";
 import { EMPTY_SEARCH, filterPlayers, hasActiveQuery, hasActiveSearch } from "../utils/filterPlayers";
 import { sortByRisk } from "../utils/sortByRisk";
 import "./SearchPage.css";
@@ -14,10 +13,9 @@ const MAX_SUGGESTIONS = 6;
 // `search`/`onSearchChange` let a parent own the query and chips so they survive leaving
 // the page; without them the page keeps its own state. `lockedPositions` restricts results
 // to those positions and hides the position chips. Picking a suggestion or a result card
-// calls `onSelectPlayer`; without `onBack` there is no back link (e.g. when embedded in a panel).
+// calls `onSelectPlayer`.
 function SearchPage({
   players = [],
-  onBack,
   roster,
   search,
   onSearchChange,
@@ -68,7 +66,6 @@ function SearchPage({
 
   return (
     <section className="search-page">
-      {onBack && <RosterLink onClick={onBack}>← Back to home</RosterLink>}
       <h1>Search Players</h1>
 
       <SearchBar

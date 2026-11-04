@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import NavMenu from "./components/NavMenu";
-import FadeIn from "./components/FadeIn";
 import WorkloadPulse from "./components/WorkloadPulse";
 import FeatureCards from "./components/FeatureCards";
 import HomeBackdrop from "./components/HomeBackdrop";
@@ -214,7 +213,6 @@ function App() {
     content = (
       <RostersPage
         players={players}
-        onBack={() => setView("home")}
         onTeamClick={(team) => {
           setSelectedTeam(team);
           setView("team-roster");
@@ -238,7 +236,6 @@ function App() {
         search={search}
         onSearchChange={setSearch}
         onSelectPlayer={(player) => openPlayer(player, "search")}
-        onBack={() => setView("home")}
         roster={rosterControls}
       />
     );
@@ -253,7 +250,6 @@ function App() {
         limit={limit}
         onFormatChange={handleFormatChange}
         onMove={handleMove}
-        onBack={() => setView("home")}
         onUpdate={handleUpdateRosterEntry}
         onRemove={handleRemoveFromRoster}
       />
@@ -269,12 +265,7 @@ function App() {
       />
     );
   } else if (view === "about") {
-    content = (
-      <AboutPage
-        onBack={() => setView("home")}
-        onNavigateToAcwr={() => setView("acwr-info")}
-      />
-    );
+    content = <AboutPage onNavigateToAcwr={() => setView("acwr-info")} />;
   } else if (view === "acwr-info") {
     content = <AcwrInfoPage onBack={() => setView("about")} />;
   } else {
@@ -283,16 +274,6 @@ function App() {
     content = (
       <>
         <HomeBackdrop />
-        <FadeIn className="home-menu-layer">
-          <NavMenu
-            items={[
-              { label: "Roster", onClick: () => setView("rosters") },
-              { label: "Search", onClick: () => setView("search") },
-              { label: "My Roster", onClick: () => setView("my-roster") },
-              { label: "About", onClick: () => setView("about") },
-            ]}
-          />
-        </FadeIn>
         <WorkloadPulse delay={introDelay} />
         <FeatureCards
           delay={introDelay + 500}
@@ -329,7 +310,18 @@ function App() {
 
   return (
     <main className="app">
-      <Header />
+      <Header isHome={view === "home"} onHome={() => setView("home")} />
+      {/* Sub-pages only: the homepage's feature cards already lead everywhere. */}
+      {view !== "home" && (
+        <NavMenu
+          items={[
+            { label: "Roster", onClick: () => setView("rosters") },
+            { label: "Search", onClick: () => setView("search") },
+            { label: "My Roster", onClick: () => setView("my-roster") },
+            { label: "About", onClick: () => setView("about") },
+          ]}
+        />
+      )}
       {rosterError && (
         <p className="roster-error" role="alert">
           Roster error: {rosterError}

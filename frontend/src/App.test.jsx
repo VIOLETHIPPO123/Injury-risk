@@ -78,9 +78,16 @@ function rosterGetCalls() {
   );
 }
 
+// The homepage has no menu; its feature cards lead to each section.
+function featureCard(label) {
+  return screen.getByRole("button", { name: new RegExp(`^${label}`) });
+}
+
+const homeTitle = () => screen.getByRole("button", { name: "SIDELINED, go to home page" });
+const menuToggle = () => screen.getByRole("button", { name: "Toggle navigation menu" });
+
 async function openMyRosterPage() {
-  fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
-  fireEvent.click(screen.getByRole("menuitem", { name: "My Roster" }));
+  fireEvent.click(featureCard("My Roster"));
 }
 
 // Types a query into the search box and presses Enter to fill the results grid.
@@ -97,29 +104,20 @@ afterEach(() => {
 async function renderHome(players = []) {
   getPlayers.mockResolvedValue(players);
   render(<App />);
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Toggle navigation menu" }),
-    ).toBeInTheDocument(),
-  );
+  await screen.findByTestId("home-backdrop");
 }
 
 describe("homepage animation", () => {
-  it("renders the animated menu and workload pulse on load", async () => {
+  it("renders the workload pulse on load", async () => {
     await renderHome();
 
-    expect(
-      screen.getByRole("button", { name: "Toggle navigation menu" }).closest(".fade-in"),
-    ).toBeInTheDocument();
     expect(screen.getByTestId("workload-pulse")).toBeInTheDocument();
   });
 
   it("animates the title in, while keeping its name readable as one word", async () => {
     await renderHome();
 
-    expect(
-      screen.getByRole("heading", { level: 1, name: "SIDELINED" }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toContainElement(homeTitle());
     expect(screen.getAllByTestId("staggered-text")).toHaveLength(2);
   });
 
@@ -132,11 +130,8 @@ describe("homepage animation", () => {
         .querySelector(".workload-pulse-bar").style.animationDelay;
     expect(firstBarDelay()).toBe("1300ms");
 
-    await user.click(
-      screen.getByRole("button", { name: "Toggle navigation menu" }),
-    );
-    await user.click(screen.getByRole("menuitem", { name: "About" }));
-    await user.click(screen.getByText("← Back to home"));
+    await user.click(featureCard("About"));
+    await user.click(homeTitle());
 
     expect(firstBarDelay()).toBe("0ms");
   });
@@ -177,34 +172,107 @@ describe("homepage animation", () => {
       screen.getByRole("heading", { name: "About Sidelined" }),
     ).toBeInTheDocument();
   });
+});
 
-  it("doesn't delay the menu: it opens on the first click after load", async () => {
+describe("the title links home", () => {
+  it("returns to the home page when clicked from a sub-page", async () => {
     const user = userEvent.setup();
     await renderHome();
+    await user.click(featureCard("Search"));
 
-    await user.click(
-      screen.getByRole("button", { name: "Toggle navigation menu" }),
-    );
+    await user.click(homeTitle());
 
-    expect(screen.getByRole("menuitem", { name: "Roster" })).toBeInTheDocument();
+    expect(screen.getByTestId("home-backdrop")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Search Players" })).not.toBeInTheDocument();
+  });
+
+  it("returns to the home page when reached with Tab and Enter is pressed", async () => {
+    const user = userEvent.setup();
+    await renderHome();
+    await user.click(featureCard("About"));
+
+    // The title is the first thing on the page, so one Tab from the top reaches it.
+    document.activeElement.blur();
+    await user.tab();
+    expect(homeTitle()).toHaveFocus();
+    await user.keyboard("{Enter}");
+
+    expect(screen.getByTestId("home-backdrop")).toBeInTheDocument();
+  });
+
+  it("does nothing on the home page, and the title animation doesn't replay", async () => {
+    const user = userEvent.setup();
+    await renderHome();
+    const letters = screen.getAllByTestId("staggered-text")[0];
+    expect(homeTitle()).toHaveAttribute("aria-current", "page");
+
+    await user.click(homeTitle());
+
+    expect(screen.getByTestId("home-backdrop")).toBeInTheDocument();
+    // Same DOM node: the letters weren't remounted, so their animation didn't restart.
+    expect(screen.getAllByTestId("staggered-text")[0]).toBe(letters);
+  });
+
+  it("doesn't replay the title animation when going out and back home", async () => {
+    const user = userEvent.setup();
+    await renderHome();
+    const letters = screen.getAllByTestId("staggered-text")[0];
+
+    await user.click(featureCard("Roster"));
+    expect(homeTitle()).not.toHaveAttribute("aria-current");
+    await user.click(homeTitle());
+
+    expect(screen.getAllByTestId("staggered-text")[0]).toBe(letters);
   });
 });
 
-describe("homepage navigation", () => {
+describe("navigation menu", () => {
+  it("isn't on the home page", async () => {
+    await renderHome();
+
+    expect(
+      screen.queryByRole("button", { name: "Toggle navigation menu" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("is on a sub-page and opens on the first click", async () => {
+    const user = userEvent.setup();
+    await renderHome();
+    await user.click(featureCard("Search"));
+
+    await user.click(menuToggle());
+
+    expect(screen.getByRole("menuitem", { name: "Roster" })).toBeInTheDocument();
+  });
+
+  it("sits in the same spot on every sub-page, right after the header", async () => {
+    const user = userEvent.setup();
+    await renderHome();
+    const menuSpot = () => document.querySelector("main.app > header").nextElementSibling;
+
+    for (const label of ["Roster", "Search", "My Roster", "About"]) {
+      await user.click(homeTitle());
+      await user.click(featureCard(label));
+      expect(menuSpot()).toContainElement(menuToggle());
+    }
+    await user.click(screen.getByRole("button", { name: /what is acwr/i }));
+    expect(menuSpot()).toContainElement(menuToggle());
+  });
+
   it.each([
     ["Roster", "Rosters"],
     ["Search", "Search Players"],
     ["My Roster", "My Roster"],
     ["About", "About Sidelined"],
   ])(
-    "renders a %s item in the nav menu that navigates to the %s page",
+    "has a %s item that navigates to the %s page",
     async (label, pageHeading) => {
       const user = userEvent.setup();
       await renderHome();
+      // Start on a different page, so the item really has to navigate.
+      await user.click(featureCard(label === "About" ? "Search" : "About"));
 
-      await user.click(
-        screen.getByRole("button", { name: "Toggle navigation menu" }),
-      );
+      await user.click(menuToggle());
       await user.click(screen.getByRole("menuitem", { name: label }));
 
       expect(
@@ -212,6 +280,54 @@ describe("homepage navigation", () => {
       ).toBeInTheDocument();
     },
   );
+
+  it("isn't shown inside the search embedded in the compare panel", async () => {
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+    await user.click(featureCard("Search"));
+    await user.type(screen.getByRole("combobox", { name: "Search players by name" }), "bri");
+    await user.keyboard("{ArrowDown}{Enter}");
+
+    await user.click(screen.getByRole("button", { name: "Compare" }));
+
+    const panel = screen.getByRole("complementary", { name: "Compare with my roster" });
+    expect(within(panel).getByRole("heading", { name: "Search Players" })).toBeInTheDocument();
+    expect(
+      within(panel).queryByRole("button", { name: "Toggle navigation menu" }),
+    ).not.toBeInTheDocument();
+    expect(within(panel).queryByRole("button", { name: /back to/i })).not.toBeInTheDocument();
+  });
+});
+
+describe("back links", () => {
+  it.each([
+    ["Roster", "Rosters"],
+    ["Search", "Search Players"],
+    ["My Roster", "My Roster"],
+    ["About", "About Sidelined"],
+  ])("the %s page has no Back to home link", async (label, pageHeading) => {
+    const user = userEvent.setup();
+    await renderHome();
+
+    await user.click(featureCard(label));
+
+    expect(screen.getByRole("heading", { name: pageHeading })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /back to home/i })).not.toBeInTheDocument();
+  });
+
+  it("the ACWR page links back to About", async () => {
+    const user = userEvent.setup();
+    await renderHome();
+    await user.click(featureCard("About"));
+    await user.click(screen.getByRole("button", { name: /what is acwr/i }));
+
+    await user.click(screen.getByRole("button", { name: "← Back to About" }));
+
+    expect(screen.getByRole("heading", { name: "About Sidelined" })).toBeInTheDocument();
+  });
+});
+
+describe("homepage navigation", () => {
 
   it("does not show the What is ACWR? link on the homepage", async () => {
     await renderHome();
@@ -225,10 +341,7 @@ describe("homepage navigation", () => {
     const user = userEvent.setup();
     await renderHome();
 
-    await user.click(
-      screen.getByRole("button", { name: "Toggle navigation menu" }),
-    );
-    await user.click(screen.getByRole("menuitem", { name: "About" }));
+    await user.click(featureCard("About"));
     await user.click(screen.getByRole("button", { name: /what is acwr/i }));
 
     expect(
@@ -240,8 +353,7 @@ describe("homepage navigation", () => {
 test("Add to roster submits the expected payload and the player shows up on My Roster", async () => {
   // Arrange
   await renderHome(PLAYERS);
-  fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
-  fireEvent.click(screen.getByRole("menuitem", { name: "Search" }));
+  fireEvent.click(featureCard("Search"));
   submitSearch("brissett");
 
   // Act
@@ -256,7 +368,7 @@ test("Add to roster submits the expected payload and the player shows up on My R
   // Assert — the UI reflects the new entry
   expect(await screen.findByText("On my roster")).toBeInTheDocument();
   expect(screen.queryByText("Add to roster")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByText("← Back to home"));
+  fireEvent.click(homeTitle());
   await openMyRosterPage();
   expect(screen.getByText("Jacoby Brissett")).toBeInTheDocument();
   // The new entry came from the POST response; the list was never reloaded.
@@ -310,8 +422,7 @@ describe("roster updates without a page refresh", () => {
     await screen.findByText(/Your roster is empty/);
 
     // Act
-    fireEvent.click(screen.getByText("← Back to home"));
-    fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
+    fireEvent.click(menuToggle());
     fireEvent.click(screen.getByRole("menuitem", { name: "Search" }));
     submitSearch("brissett");
 
@@ -328,8 +439,7 @@ describe("search persistence", () => {
   ];
 
   async function openSearchPage(user) {
-    await user.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
-    await user.click(screen.getByRole("menuitem", { name: "Search" }));
+    await user.click(featureCard("Search"));
   }
 
   function chip(group, label) {
@@ -344,7 +454,7 @@ describe("search persistence", () => {
     await user.type(screen.getByRole("combobox", { name: "Search players by name" }), "la");
     await user.click(chip("Position", "WR"));
     await user.click(chip("Team", "DAL"));
-    await user.click(screen.getByText("← Back to home"));
+    await user.click(homeTitle());
     await openSearchPage(user);
 
     expect(screen.getByRole("combobox", { name: "Search players by name" })).toHaveValue("la");
@@ -361,7 +471,7 @@ describe("search persistence", () => {
     await openSearchPage(user);
     await user.click(screen.getByRole("button", { name: "Sort by risk" }));
     await user.click(screen.getByRole("button", { name: "Lowest risk first" }));
-    await user.click(screen.getByText("← Back to home"));
+    await user.click(homeTitle());
     await openSearchPage(user);
 
     expect(screen.getByRole("button", { name: "Sort by risk" })).toHaveAttribute("aria-pressed", "true");
@@ -382,7 +492,7 @@ describe("search persistence", () => {
     await user.click(chip("Team", "PHI"));
     await user.click(screen.getByRole("button", { name: "Sort by risk" }));
     await user.click(screen.getByRole("button", { name: "Reset" }));
-    await user.click(screen.getByText("← Back to home"));
+    await user.click(homeTitle());
     await openSearchPage(user);
 
     expect(chip("Team", "PHI")).toHaveAttribute("aria-pressed", "false");
@@ -393,9 +503,14 @@ describe("search persistence", () => {
 });
 
 describe("opening a player and going back", () => {
+  // From the homepage's feature cards, or the menu on any other page.
   async function openMenuItem(user, label) {
-    await user.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
-    await user.click(screen.getByRole("menuitem", { name: label }));
+    if (screen.queryByTestId("home-backdrop")) {
+      await user.click(featureCard(label));
+    } else {
+      await user.click(menuToggle());
+      await user.click(screen.getByRole("menuitem", { name: label }));
+    }
   }
 
   it("returns to search, with the query kept, when the player was opened from search", async () => {
@@ -436,7 +551,7 @@ describe("opening a player and going back", () => {
     await user.click(screen.getByRole("heading", { name: "Jacoby Brissett" }));
     await user.click(screen.getByRole("button", { name: "Back to team page" }));
     await user.click(screen.getByRole("button", { name: "Back to teams" }));
-    await user.click(screen.getByRole("button", { name: "Back to home" }));
+    await user.click(homeTitle());
 
     await openMenuItem(user, "Search");
     await user.type(screen.getByRole("combobox", { name: "Search players by name" }), "jacoby{Enter}");
@@ -449,8 +564,7 @@ describe("opening a player and going back", () => {
 
 describe("roster limits and errors", () => {
   async function searchForBrissett() {
-    fireEvent.click(screen.getByRole("button", { name: "Toggle navigation menu" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "Search" }));
+    fireEvent.click(featureCard("Search"));
     submitSearch("brissett");
   }
 

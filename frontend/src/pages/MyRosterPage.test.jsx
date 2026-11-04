@@ -32,7 +32,6 @@ function renderPage({ formatId = "espn-standard", roster = [PRESCOTT], slotOf = 
     limit: 16,
     onFormatChange: vi.fn(),
     onMove: vi.fn(),
-    onBack: vi.fn(),
     onUpdate: vi.fn().mockResolvedValue(true),
     onRemove: vi.fn(),
     ...overrides,

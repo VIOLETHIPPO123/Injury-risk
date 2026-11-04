@@ -21,7 +21,7 @@ const PLAYERS = [
 const OFFENSIVE_LINE = ["LT", "LG", "C", "RG", "RT"];
 
 function renderPage(props = {}) {
-  render(<SearchPage players={PLAYERS} onBack={() => {}} {...props} />);
+  render(<SearchPage players={PLAYERS} {...props} />);
 }
 
 function shownNames() {
@@ -303,7 +303,7 @@ function sortToggle() {
 
 test("with no query or filters, turning the sort on lists every player, highest risk first", async () => {
   const user = userEvent.setup();
-  render(<SearchPage players={RISK_PLAYERS} onBack={() => {}} />);
+  render(<SearchPage players={RISK_PLAYERS} />);
 
   expect(shownNames()).toEqual([]);
   await user.click(sortToggle());
@@ -321,7 +321,7 @@ test("with no query or filters, turning the sort on lists every player, highest 
 
 test("the order picker reverses the order, and players with no data stay last as \"No data\"", async () => {
   const user = userEvent.setup();
-  render(<SearchPage players={RISK_PLAYERS} onBack={() => {}} />);
+  render(<SearchPage players={RISK_PLAYERS} />);
 
   expect(screen.queryByRole("group", { name: "Sort order" })).not.toBeInTheDocument();
   await user.click(sortToggle());
@@ -343,7 +343,7 @@ test("the order picker reverses the order, and players with no data stay last as
 
 test("the sort also orders filtered results", async () => {
   const user = userEvent.setup();
-  render(<SearchPage players={RISK_PLAYERS} onBack={() => {}} />);
+  render(<SearchPage players={RISK_PLAYERS} />);
 
   await user.click(chip("Team", "DAL"));
   expect(shownNames()).toEqual(["Normal Nate", "Nodata Ned", "Spiking Steve"]);
@@ -354,7 +354,7 @@ test("the sort also orders filtered results", async () => {
 
 test("Reset turns the sort off and puts the direction back to highest first", async () => {
   const user = userEvent.setup();
-  render(<SearchPage players={RISK_PLAYERS} onBack={() => {}} />);
+  render(<SearchPage players={RISK_PLAYERS} />);
 
   await user.click(sortToggle());
   await user.click(screen.getByRole("button", { name: "Lowest risk first" }));
@@ -415,10 +415,10 @@ test("with onSelectPlayer, clicking a result reports that player", async () => {
   expect(onSelectPlayer).toHaveBeenCalledWith(PLAYERS[5]);
 });
 
-test("without onBack, there is no back link", () => {
+test("has no Back to home link; the header title does that", () => {
   render(<SearchPage players={PLAYERS} />);
 
-  expect(screen.queryByText("← Back to home")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /back to home/i })).not.toBeInTheDocument();
 });
 
 // ---------- Roster badge ----------
@@ -426,7 +426,7 @@ test("without onBack, there is no back link", () => {
 test("search results badge rostered players and offer Add to roster to the rest", async () => {
   const user = userEvent.setup();
   const roster = { ids: new Set([1]), isFull: false, limit: 16, onAdd: vi.fn() };
-  render(<SearchPage players={PLAYERS} onBack={() => {}} roster={roster} />);
+  render(<SearchPage players={PLAYERS} roster={roster} />);
 
   await user.click(chip("Team", "DAL"));
 

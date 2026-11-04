@@ -1,0 +1,20 @@
+/* Looks like the plain title; only the cursor and focus ring say it's a link home. */
+.header-home {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  cursor: pointer;
+
+  &[aria-current="page"] {
+    cursor: default;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 4px;
+    border-radius: 4px;
+  }
+}
