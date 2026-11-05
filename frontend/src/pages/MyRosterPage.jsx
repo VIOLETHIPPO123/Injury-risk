@@ -1,5 +1,4 @@
 import { useState } from "react";
-import RosterLink from "../components/RosterLink";
 import { calculateAcwr, riskLevel } from "../utils/acwr";
 import { benchSuggestions } from "../utils/lineupSuggestions";
 import { BENCH, canMoveTo, DEFAULT_FORMAT, IR } from "../utils/rosterFormats";
@@ -117,7 +116,6 @@ function MyRosterPage({
   limit,
   onFormatChange,
   onMove,
-  onBack,
   onUpdate,
   onRemove,
 }) {
@@ -129,7 +127,6 @@ function MyRosterPage({
   if (!format) {
     return (
       <section className="my-roster-page">
-        <RosterLink onClick={onBack}>← Back to home</RosterLink>
         <h1>My Roster</h1>
         <p>Loading roster formats…</p>
       </section>
@@ -189,7 +186,6 @@ function MyRosterPage({
 
   return (
     <section className="my-roster-page">
-      <RosterLink onClick={onBack}>← Back to home</RosterLink>
       <h1>My Roster</h1>
       {limit !== undefined && (
         <p className="my-roster-count">

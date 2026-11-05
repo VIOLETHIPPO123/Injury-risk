@@ -37,7 +37,7 @@ describe("AcwrInfoPage", () => {
     const onBack = vi.fn();
     render(<AcwrInfoPage onBack={onBack} />);
 
-    screen.getByRole("button", { name: /back to home/i }).click();
+    screen.getByRole("button", { name: "← Back to About" }).click();
 
     expect(onBack).toHaveBeenCalledTimes(1);
   });

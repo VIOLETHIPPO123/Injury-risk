@@ -8,7 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 // Hard-coded stand-in until the external API module. This game-by-game history is SAMPLE

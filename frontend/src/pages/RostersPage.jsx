@@ -1,6 +1,5 @@
 // import PlayerCard from "../components/PlayerCard";
 
-import RosterLink from "../components/RosterLink";
 import { DIVISIONS } from "../data/divisions";
 import "./RostersPage.css";
 
@@ -17,10 +16,9 @@ import "./RostersPage.css";
 // );
 // }
 
-function RostersPage({ onBack, onTeamClick }) {
+function RostersPage({ onTeamClick }) {
   return (
     <section className="rosters-page">
-      <RosterLink onClick={onBack}>Back to home</RosterLink>
       <h1>Rosters</h1>
 
       {Object.entries(DIVISIONS).map(([conference, divisions]) => (

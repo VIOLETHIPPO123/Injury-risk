@@ -1,10 +1,9 @@
 import RosterLink from "../components/RosterLink";
 import "./AboutPage.css";
 
-function AboutPage({ onBack, onNavigateToAcwr }) {
+function AboutPage({ onNavigateToAcwr }) {
   return (
     <section className="about-page">
-      <RosterLink onClick={onBack}>← Back to home</RosterLink>
       <h1>About Sidelined</h1>
       <p>
         Sidelined helps fantasy football managers spot hidden injury risk

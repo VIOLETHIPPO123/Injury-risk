@@ -51,7 +51,7 @@ const DATA_SOURCES = [
 function AcwrInfoPage({ onBack }) {
   return (
     <section className="acwr-info-page">
-      <RosterLink onClick={onBack}>← Back to home</RosterLink>
+      <RosterLink onClick={onBack}>← Back to About</RosterLink>
       <h1>Understanding ACWR</h1>
 
       <div className="acwr-explainer">
