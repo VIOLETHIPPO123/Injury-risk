@@ -52,6 +52,19 @@
     		<scope>runtime</scope>
 		</dependency>
 
+		<!-- Checks Supabase-issued JWTs on incoming requests (the "resource server" side). -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+		</dependency>
+
+		<!-- Mock JWTs (jwt()) for controller tests. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-oauth2-resource-server-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 		<!-- In-memory database for the "test" profile, so tests and CI don't need Supabase. -->
 		<dependency>
 			<groupId>com.h2database</groupId>
