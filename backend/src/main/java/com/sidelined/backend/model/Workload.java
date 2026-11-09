@@ -1,8 +1,15 @@
 package com.sidelined.backend.model;
 
+import jakarta.persistence.Column;
+import jakarta.persistence.Embeddable;
+
 // The snap counts that feed the injury-risk (ACWR) score. They only mean something as a pair,
 // so they travel together and the rule linking them is checked once, here.
-public record Workload(int snapsLastGame, int snapsLast4Games) {
+// Embedded in Player, so they are two columns on the players table.
+@Embeddable
+public record Workload(
+        @Column(name = "snaps_last_game", nullable = false) int snapsLastGame,
+        @Column(name = "snaps_last_4_games", nullable = false) int snapsLast4Games) {
 
     public Workload {
         if (snapsLastGame < 0 || snapsLast4Games < 0) {

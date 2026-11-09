@@ -1,7 +1,6 @@
 package com.sidelined.backend.repository;
 
 import com.sidelined.backend.model.Player;
-import com.sidelined.backend.model.Team;
 import com.sidelined.backend.model.NflTeam;
 import com.sidelined.backend.model.Position;
 import org.junit.jupiter.api.Test;
@@ -78,23 +77,6 @@ class InMemoryPlayerRepositoryTest {
             assertFalse(player.getName() == null || player.getName().isBlank(), "Missing name for id " + player.getId());
             assertNotNull(player.getTeam(), "Missing team for " + player.getName());
             assertNotNull(player.getPosition(), "Missing position for " + player.getName());
-        }
-    }
-
-    @Test
-    void findAll_everyPlayerBelongsToAKnownTeam() {
-        // Arrange
-        Set<String> teamCodes = new InMemoryTeamRepository().findAll().stream()
-            .map(Team::getCode)
-            .collect(Collectors.toSet());
-
-        // Act
-        List<Player> players = playerRepository.findAll();
-
-        // Assert
-        for (Player player : players) {
-            assertTrue(teamCodes.contains(player.getTeam().getCode()),
-                player.getName() + " is on unknown team " + player.getTeam());
         }
     }
 

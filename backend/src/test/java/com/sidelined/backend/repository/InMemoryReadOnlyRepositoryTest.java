@@ -1,5 +1,6 @@
 package com.sidelined.backend.repository;
 
+import com.sidelined.backend.model.NflTeam;
 import com.sidelined.backend.model.Team;
 import org.junit.jupiter.api.Test;
 import java.util.List;
@@ -11,15 +12,15 @@ import static org.junit.jupiter.api.Assertions.*;
 class InMemoryReadOnlyRepositoryTest {
 
     // The smallest possible subclass: a list and which field is the id.
-    private static class TestRepository extends InMemoryReadOnlyRepository<Team, String> {
+    private static class TestRepository extends InMemoryReadOnlyRepository<Team, NflTeam> {
         TestRepository(List<Team> teams) {
             super(teams, Team::getCode);
         }
     }
 
     private final List<Team> teams = List.of(
-        new Team("ARI", "Arizona Cardinals"),
-        new Team("ATL", "Atlanta Falcons")
+        new Team(NflTeam.ARI, "Arizona Cardinals"),
+        new Team(NflTeam.ATL, "Atlanta Falcons")
     );
 
     @Test
@@ -40,7 +41,7 @@ class InMemoryReadOnlyRepositoryTest {
         TestRepository repository = new TestRepository(teams);
 
         // Act
-        Optional<Team> result = repository.findById("ATL");
+        Optional<Team> result = repository.findById(NflTeam.ATL);
 
         // Assert
         assertTrue(result.isPresent());
@@ -53,7 +54,7 @@ class InMemoryReadOnlyRepositoryTest {
         TestRepository repository = new TestRepository(teams);
 
         // Act
-        Optional<Team> result = repository.findById("XYZ");
+        Optional<Team> result = repository.findById(NflTeam.BAL);
 
         // Assert
         assertTrue(result.isEmpty());
@@ -65,16 +66,16 @@ class InMemoryReadOnlyRepositoryTest {
         TestRepository repository = new TestRepository(teams);
 
         // Act + Assert
-        assertTrue(repository.existsById("ARI"));
-        assertFalse(repository.existsById("XYZ"));
+        assertTrue(repository.existsById(NflTeam.ARI));
+        assertFalse(repository.existsById(NflTeam.BAL));
     }
 
     @Test
     void constructor_duplicateId_failsFast() {
         // Arrange
         List<Team> withDuplicate = List.of(
-            new Team("ARI", "Arizona Cardinals"),
-            new Team("ARI", "Another Arizona")
+            new Team(NflTeam.ARI, "Arizona Cardinals"),
+            new Team(NflTeam.ARI, "Another Arizona")
         );
 
         // Act + Assert
