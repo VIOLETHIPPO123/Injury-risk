@@ -4,12 +4,11 @@ import com.sidelined.backend.model.Player;
 import com.sidelined.backend.model.Workload;
 import static com.sidelined.backend.model.NflTeam.*;
 import static com.sidelined.backend.model.Position.*;
-import org.springframework.stereotype.Repository;
 import java.util.List;
 
-// Hard-coded stand-in until the external API module. The lookups live in
-// InMemoryReadOnlyRepository; this class only holds the players, keyed by id.
-@Repository
+// Test data only: the app reads players from the players table (JpaPlayerRepository), so this
+// is no longer a Spring bean. Tests still use it as a fixed set of players. DEV-102 deletes it.
+// The lookups live in InMemoryReadOnlyRepository; this class only holds the players, keyed by id.
 public class InMemoryPlayerRepository
         extends InMemoryReadOnlyRepository<Player, Long>
         implements PlayerRepository {
