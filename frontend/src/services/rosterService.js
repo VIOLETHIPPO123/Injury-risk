@@ -1,6 +1,9 @@
-const API_BASE_URL = "http://localhost:8080";
+import { apiFetch } from "./apiFetch";
+
 const ROSTER_PATH = "/roster";
 
+// Every roster call is the signed-in user's: apiFetch adds their token, and a missing or
+// expired one signs them out (SignedOutError) instead of failing here.
 async function request(method, path, body) {
   const options = { method };
   if (body !== undefined) {
@@ -8,7 +11,7 @@ async function request(method, path, body) {
     options.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, options);
+  const response = await apiFetch(path, options);
   if (!response.ok) {
     // The backend explains a rejection in { error }, e.g. why a move isn't allowed.
     let reason;
@@ -54,12 +57,12 @@ export function getRosterFormats() {
   return request("GET", "/roster/formats");
 }
 
-// Fetches the league's settings: { formatId }.
+// Fetches the signed-in user's settings: { formatId }.
 export function getRosterSettings() {
   return request("GET", "/roster/settings");
 }
 
-// Saves the league's format. The backend rejects an unknown one with a 400.
+// Saves the signed-in user's format. The backend rejects an unknown one with a 400.
 export function updateRosterSettings(formatId) {
   return request("PUT", "/roster/settings", { formatId });
 }

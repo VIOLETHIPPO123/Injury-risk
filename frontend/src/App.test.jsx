@@ -22,25 +22,55 @@ const PLAYERS = [
 
 function jsonResponse(status, body) {
   return Promise.resolve({
-    ok: true,
+    ok: status >= 200 && status < 300,
     status,
     json: () => Promise.resolve(body),
   });
 }
+
+// The token the fake backend turns away, as if Supabase had revoked or expired it.
+const REVOKED_TOKEN = "revoked-token";
+// What the fake POST /auth/signin accepts.
+const PASSWORD = "correct-password";
 
 // What the roster endpoint (GET /roster on the backend) returns when the app loads. Tests that start with entries overwrite it.
 let savedEntries = [];
 // The league's format, as GET /roster/settings returns it. PUT /roster/settings changes it.
 let savedFormatId = "espn-standard";
 
+// A token that won't expire during the tests, stored the way a real sign-in stores it.
+function storeSignedInSession() {
+  localStorage.setItem(
+    "sidelined.session",
+    JSON.stringify({ accessToken: "test-token", expiresAt: Math.floor(Date.now() / 1000) + 3600 }),
+  );
+}
+
 // A fake backend for the roster CRUD endpoints. Players come from the mocked playerService above.
+// Every test starts signed in, since the roster is the signed-in user's; the sign-in tests below
+// clear the session first.
 beforeEach(() => {
+  localStorage.clear();
+  storeSignedInSession();
   savedEntries = [];
   savedFormatId = "espn-standard";
   vi.stubGlobal(
     "fetch",
     vi.fn((url, options = {}) => {
       const method = options.method ?? "GET";
+      const auth = options.headers?.Authorization;
+
+      if (url.endsWith("/auth/signin")) {
+        const { password } = JSON.parse(options.body);
+        return password === PASSWORD
+          ? jsonResponse(200, { access_token: "fresh-token", expires_in: 3600 })
+          : jsonResponse(400, { error_code: "invalid_credentials", msg: "Invalid login credentials" });
+      }
+      // Like the real backend: the roster (except the format list) and /me need a valid token.
+      const needsToken = url.endsWith("/me") || (url.includes("/roster") && !url.endsWith("/roster/formats"));
+      if (needsToken && (!auth || auth === `Bearer ${REVOKED_TOKEN}`)) {
+        return jsonResponse(401, {});
+      }
       const id = Number(url.match(/\/roster\/(\d+)$/)?.[1]);
       const movedId = Number(url.match(/\/roster\/(\d+)\/slot$/)?.[1]);
 
@@ -65,6 +95,7 @@ beforeEach(() => {
         return jsonResponse(200, { formatId: savedFormatId });
       }
       if (url.endsWith("/roster/settings")) return jsonResponse(200, { formatId: savedFormatId });
+      if (url.endsWith("/me")) return jsonResponse(200, { role: "USER" });
       if (url.endsWith("/injuries")) return jsonResponse(200, []);
       if (url.endsWith("/workload")) return jsonResponse(200, []);
       throw new Error(`Unexpected request: ${method} ${url}`);
@@ -362,7 +393,11 @@ test("Add to roster submits the expected payload and the player shows up on My R
   // Assert — the request sent to the backend
   const postCall = fetch.mock.calls.find(([, opts]) => opts?.method === "POST");
   expect(postCall[0]).toBe("http://localhost:8080/roster");
-  expect(postCall[1].headers).toEqual({ "Content-Type": "application/json" });
+  // apiFetch adds the signed-in user's token.
+  expect(postCall[1].headers).toEqual({
+    "Content-Type": "application/json",
+    Authorization: "Bearer test-token",
+  });
   expect(JSON.parse(postCall[1].body)).toEqual({ playerId: 7, note: "" });
 
   // Assert — the UI reflects the new entry
@@ -690,5 +725,154 @@ describe("the lineup on My Roster", () => {
       "Roster error: PUT /roster/settings failed with status 400",
     );
     expect(screen.getByLabelText("Format")).toHaveValue("espn-standard");
+  });
+});
+
+describe("signing in and the My Roster guard", () => {
+  async function signInWith(user, password = PASSWORD) {
+    await user.type(screen.getByLabelText("Email"), "fan@example.com");
+    await user.type(screen.getByLabelText("Password"), password);
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+  }
+
+  const signInHeading = () => screen.queryByRole("heading", { name: "Sign in" });
+
+  test("signed out, My Roster shows sign-in, then My Roster itself once signed in", async () => {
+    localStorage.clear();
+    savedEntries = [{ id: 1, playerId: 7, slot: "BENCH", note: "" }];
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+
+    await user.click(featureCard("My Roster"));
+    expect(signInHeading()).toBeInTheDocument();
+    // Nothing was asked of the roster while signed out.
+    expect(rosterGetCalls()).toHaveLength(0);
+
+    await signInWith(user);
+
+    expect(await screen.findByRole("heading", { name: "My Roster" })).toBeInTheDocument();
+    expect(await screen.findByText("Jacoby Brissett")).toBeInTheDocument();
+    const rosterCall = fetch.mock.calls.find(([url, opts]) => url.endsWith("/roster") && opts?.method === "GET");
+    expect(rosterCall[1].headers.Authorization).toBe("Bearer fresh-token");
+  });
+
+  test("a wrong password stays on sign-in with Supabase's message", async () => {
+    localStorage.clear();
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+
+    await user.click(featureCard("My Roster"));
+    await signInWith(user, "wrong");
+
+    expect(await screen.findByText("Invalid login credentials")).toBeInTheDocument();
+    expect(signInHeading()).toBeInTheDocument();
+  });
+
+  test("an expired stored token counts as signed out", async () => {
+    localStorage.setItem(
+      "sidelined.session",
+      JSON.stringify({ accessToken: "old", expiresAt: Math.floor(Date.now() / 1000) - 60 }),
+    );
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+
+    await user.click(featureCard("My Roster"));
+
+    expect(signInHeading()).toBeInTheDocument();
+    expect(screen.queryByText(/Roster error/)).not.toBeInTheDocument();
+  });
+
+  test("a token the backend rejects sends the user to sign-in instead of showing an error, then back", async () => {
+    localStorage.setItem(
+      "sidelined.session",
+      JSON.stringify({ accessToken: REVOKED_TOKEN, expiresAt: Math.floor(Date.now() / 1000) + 3600 }),
+    );
+    getPlayers.mockResolvedValue(PLAYERS);
+    const user = userEvent.setup();
+    render(<App />);
+
+    // The roster load on start-up was turned away, so the app goes straight to sign-in.
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Your session has expired");
+    expect(screen.queryByText(/Roster error/)).not.toBeInTheDocument();
+    expect(localStorage.getItem("sidelined.session")).toBeNull();
+
+    // Signing in again goes back to where the user was: the homepage.
+    await signInWith(user);
+    expect(await screen.findByTestId("home-backdrop")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+  });
+
+  test("a token rejected mid-use sends the user to sign-in, then back to that page", async () => {
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+    await user.click(featureCard("Search"));
+    submitSearch("brissett");
+    // The session ends while the user is on the search page.
+    localStorage.setItem(
+      "sidelined.session",
+      JSON.stringify({ accessToken: REVOKED_TOKEN, expiresAt: Math.floor(Date.now() / 1000) + 3600 }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Add to roster" }));
+
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.queryByText(/Roster error/)).not.toBeInTheDocument();
+    await signInWith(user);
+    expect(await screen.findByRole("heading", { name: "Search Players" })).toBeInTheDocument();
+  });
+
+  test("signed out, Add to roster leads to sign-in and back to the same page", async () => {
+    localStorage.clear();
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+    await user.click(featureCard("Search"));
+    submitSearch("brissett");
+
+    await user.click(screen.getByRole("button", { name: "Add to roster" }));
+    expect(signInHeading()).toBeInTheDocument();
+    await signInWith(user);
+
+    expect(await screen.findByRole("heading", { name: "Search Players" })).toBeInTheDocument();
+  });
+
+  test("Sign out forgets the roster and guards My Roster again", async () => {
+    savedEntries = [{ id: 1, playerId: 7, slot: "BENCH", note: "" }];
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+    await user.click(featureCard("My Roster"));
+    expect(await screen.findByText("Jacoby Brissett")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Sign out" }));
+
+    expect(localStorage.getItem("sidelined.session")).toBeNull();
+    expect(screen.getByTestId("home-backdrop")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
+    await user.click(featureCard("My Roster"));
+    expect(signInHeading()).toBeInTheDocument();
+  });
+
+  test("the role from /me is kept: an admin sees the Admin badge", async () => {
+    const realFetch = fetch.getMockImplementation();
+    fetch.mockImplementation((url, options) =>
+      url.endsWith("/me") ? jsonResponse(200, { role: "ADMIN" }) : realFetch(url, options),
+    );
+
+    await renderHome(PLAYERS);
+
+    expect(await screen.findByText("Admin")).toBeInTheDocument();
+  });
+
+  test("the Sign in button comes back to where the user was", async () => {
+    localStorage.clear();
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+    await user.click(featureCard("About"));
+
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    await signInWith(user);
+
+    expect(await screen.findByRole("heading", { name: "About Sidelined" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });
 });
