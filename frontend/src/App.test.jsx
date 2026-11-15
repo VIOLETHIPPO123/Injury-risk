@@ -876,3 +876,38 @@ describe("signing in and the My Roster guard", () => {
     expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
   });
 });
+
+describe("coming back from Google sign-in", () => {
+  test("a Google user is signed in, gets their role from /me and lands where they were headed", async () => {
+    // main.jsx has already stored the token from the URL; App gets the result.
+    savedEntries = [{ id: 1, playerId: 7, slot: "BENCH", note: "" }];
+    getPlayers.mockResolvedValue(PLAYERS);
+
+    render(<App oauthResult={{ signedIn: true, returnTo: "my-roster" }} />);
+
+    expect(await screen.findByRole("heading", { name: "My Roster" })).toBeInTheDocument();
+    expect(await screen.findByText("Jacoby Brissett")).toBeInTheDocument();
+    const meCall = fetch.mock.calls.find(([url]) => url.endsWith("/me"));
+    expect(meCall[1].headers.Authorization).toBe("Bearer test-token");
+  });
+
+  test("with nowhere to go back to, a Google user lands on the homepage", async () => {
+    getPlayers.mockResolvedValue(PLAYERS);
+
+    render(<App oauthResult={{ signedIn: true, returnTo: null }} />);
+
+    expect(await screen.findByTestId("home-backdrop")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sign out" })).toBeInTheDocument();
+  });
+
+  test("a failed Google sign-in shows sign-in with the reason", async () => {
+    localStorage.clear();
+    getPlayers.mockResolvedValue(PLAYERS);
+
+    render(<App oauthResult={{ error: "User cancelled the login" }} />);
+
+    expect(await screen.findByRole("heading", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Google sign-in didn't work: User cancelled the login");
+    expect(screen.getByRole("button", { name: "Sign in with Google" })).toBeInTheDocument();
+  });
+});

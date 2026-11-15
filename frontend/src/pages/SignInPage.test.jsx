@@ -76,3 +76,13 @@ test("links to sign-up", async () => {
 
   expect(onSwitchToSignUp).toHaveBeenCalled();
 });
+
+test("offers Sign in with Google", async () => {
+  const user = userEvent.setup();
+  const onGoogle = vi.fn();
+  renderPage({ onGoogle });
+
+  await user.click(screen.getByRole("button", { name: "Sign in with Google" }));
+
+  expect(onGoogle).toHaveBeenCalledTimes(1);
+});

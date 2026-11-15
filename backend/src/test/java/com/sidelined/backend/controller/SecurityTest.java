@@ -29,6 +29,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -78,6 +80,14 @@ class SecurityTest {
 
     private static RequestPostProcessor tokenFor(String userId) {
         return jwt().jwt(token -> token.subject(userId));
+    }
+
+    // A token as Supabase issues it to someone who signed in with Google: a different provider in
+    // app_metadata, but the same kind of token, signed the same way, with the user id in "sub".
+    private static RequestPostProcessor googleTokenFor(String userId) {
+        return jwt().jwt(token -> token.subject(userId)
+            .claim("email", "fan@gmail.com")
+            .claim("app_metadata", Map.of("provider", "google", "providers", List.of("google"))));
     }
 
     // ---------- Public endpoints: no token needed ----------
@@ -210,6 +220,50 @@ class SecurityTest {
     @Test
     void adminCheck_withoutAToken_gets401() throws Exception {
         mvc.perform(get("/test/admin-only")).andExpect(status().isUnauthorized());
+    }
+
+    // ---------- Google sign-in ----------
+
+    @Test
+    void googleSignIn_needsNoToken_andRedirectsToSupabasesGoogleAuthorizeUrl() throws Exception {
+        mvc.perform(get("/auth/google"))
+            .andExpect(status().isFound())
+            .andExpect(header().string(HttpHeaders.LOCATION,
+                "http://localhost:54321/auth/v1/authorize?provider=google&redirect_to=http://localhost:5173"));
+    }
+
+    @Test
+    void googleUser_getsAUserProfile_throughTheSameMeEndpoint() throws Exception {
+        String userId = newUserId();
+
+        mvc.perform(get("/me").with(googleTokenFor(userId)))
+            .andExpect(status().isOk())
+            .andExpect(content().json("{\"role\":\"USER\"}", true));
+
+        assertEquals(Role.USER, profileRepository.findById(userId).orElseThrow().getRole());
+    }
+
+    @Test
+    void googleUser_whoIsntAnAdmin_gets403() throws Exception {
+        String userId = newUserId();
+        mvc.perform(get("/me").with(googleTokenFor(userId)));
+
+        mvc.perform(get("/test/admin-only").with(googleTokenFor(userId)))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.error").value("Admins only"));
+    }
+
+    @Test
+    void googleUser_promotedToAdmin_isLetThrough() throws Exception {
+        String userId = newUserId();
+        mvc.perform(get("/me").with(googleTokenFor(userId)));
+        // Promotion is the same as for anyone: set profiles.role to ADMIN (here, through the repository).
+        profileRepository.save(new Profile(userId, Role.ADMIN));
+
+        mvc.perform(get("/me").with(googleTokenFor(userId)))
+            .andExpect(content().json("{\"role\":\"ADMIN\"}", true));
+        mvc.perform(get("/test/admin-only").with(googleTokenFor(userId)))
+            .andExpect(status().isOk());
     }
 
     // ---------- CORS ----------

@@ -81,3 +81,25 @@
     cursor: pointer;
   }
 }
+
+.auth-divider {
+  margin: 1rem 0 0.5rem;
+  text-align: center;
+  font-size: 13px;
+  color: var(--text);
+}
+
+.auth-google {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font: inherit;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-h);
+  background: var(--bg);
+  cursor: pointer;
+}

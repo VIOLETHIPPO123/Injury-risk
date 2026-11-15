@@ -16,6 +16,7 @@ import { getPlayers } from "./services/playerService";
 import { setSignedOutHandler, SignedOutError } from "./services/apiFetch";
 import { getMyRole } from "./services/authService";
 import { clearSession, loadSession } from "./services/session";
+import { startGoogleSignIn } from "./services/oauthRedirect";
 import {
   getRoster,
   addToRoster,
@@ -48,8 +49,13 @@ const PROTECTED_VIEWS = new Set(["my-roster"]);
 const AUTH_VIEWS = new Set(["sign-in", "sign-up"]);
 const SESSION_EXPIRED = "Your session has expired. Please sign in again.";
 
-function App() {
-  const [view, setView] = useState("home");
+// `oauthResult` is what main.jsx found in the URL on this page load: null, the return from Google
+// sign-in ({ signedIn, returnTo }, the token already stored), or a failed one ({ error }).
+function App({ oauthResult = null }) {
+  const [view, setView] = useState(() => {
+    if (oauthResult?.signedIn) return oauthResult.returnTo ?? "home";
+    return oauthResult?.error ? "sign-in" : "home";
+  });
   // The header animates only once, so after the first visit the bars shouldn't wait for it.
   const [hasLeftHome, setHasLeftHome] = useState(false);
   if (view !== "home" && !hasLeftHome) setHasLeftHome(true);
@@ -74,7 +80,9 @@ function App() {
   // Where to go after signing in from the Sign in button or an expired session.
   const [returnTo, setReturnTo] = useState(null);
   // Why the sign-in page is showing, e.g. the session expired.
-  const [authNotice, setAuthNotice] = useState(null);
+  const [authNotice, setAuthNotice] = useState(() =>
+    oauthResult?.error ? `Google sign-in didn't work: ${oauthResult.error}` : null,
+  );
 
   // The handler below runs outside React's render, so it reads the current view from a ref.
   const viewRef = useRef(view);
@@ -181,6 +189,12 @@ function App() {
     // A guarded view (e.g. My Roster) is still the current view, so it simply appears.
     if (AUTH_VIEWS.has(view)) setView(returnTo ?? "home");
     setReturnTo(null);
+  }
+
+  // The browser leaves for Google and comes back with a page load, returning to the view the user
+  // was headed for (a guarded one like My Roster is still the current view).
+  function handleGoogleSignIn() {
+    startGoogleSignIn(AUTH_VIEWS.has(view) ? returnTo : view);
   }
 
   function handleSignOut() {
@@ -300,6 +314,7 @@ function App() {
       <SignInPage
         notice={authNotice}
         onSignedIn={handleSignedIn}
+        onGoogle={handleGoogleSignIn}
         onSwitchToSignUp={() => {
           if (!AUTH_VIEWS.has(view)) setReturnTo(view);
           setView("sign-up");
@@ -310,6 +325,7 @@ function App() {
     content = (
       <SignUpPage
         onSignedIn={handleSignedIn}
+        onGoogle={handleGoogleSignIn}
         onSwitchToSignIn={() => setView("sign-in")}
       />
     );
