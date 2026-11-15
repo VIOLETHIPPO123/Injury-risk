@@ -1,49 +1,42 @@
 package com.sidelined.backend.controller;
 
-import com.sidelined.backend.repository.InMemoryInjuryRepository;
-import com.sidelined.backend.repository.InMemoryPlayerRepository;
-import com.sidelined.backend.repository.InMemoryRosterEntryRepository;
-import com.sidelined.backend.repository.InMemoryRosterFormatRepository;
-import com.sidelined.backend.repository.InMemoryRosterSettingsRepository;
-import com.sidelined.backend.service.CurrentRosterFormat;
+import com.sidelined.backend.exception.NoActiveInjuryException;
+import com.sidelined.backend.exception.NotFantasyEligibleException;
+import com.sidelined.backend.exception.PlayerAlreadyOnRosterException;
+import com.sidelined.backend.exception.PlayerNotFoundException;
+import com.sidelined.backend.exception.RosterEntryNotFoundException;
+import com.sidelined.backend.exception.RosterFullException;
+import com.sidelined.backend.exception.SlotFullException;
+import com.sidelined.backend.exception.SlotNotAllowedException;
+import com.sidelined.backend.model.RosterEntry;
 import com.sidelined.backend.service.RosterEntryService;
-import com.sidelined.backend.validation.*;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.http.MediaType;
+import org.springframework.test.json.JsonCompareMode;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-// The roster's HTTP behavior with every rule wired in, in the order Spring runs them.
-// The league is on ESPN Standard (the default): 16 players plus 1 IR.
+// The roster's HTTP behavior: routes, JSON shapes and which error becomes which status.
+// The rules themselves are tested one by one in the validation package, and all together
+// against a real database in RosterPersistenceTest.
 class RosterEntryControllerTest {
 
-    private final InMemoryPlayerRepository playerRepository = new InMemoryPlayerRepository();
-    private final InMemoryRosterEntryRepository rosterEntryRepository = new InMemoryRosterEntryRepository();
-    private final CurrentRosterFormat currentFormat = new CurrentRosterFormat(
-        new InMemoryRosterFormatRepository(), new InMemoryRosterSettingsRepository());
-
+    private final RosterEntryService rosterEntryService = mock(RosterEntryService.class);
     private final MockMvc mvc = MockMvcBuilders
-        .standaloneSetup(new RosterEntryController(new RosterEntryService(
-            rosterEntryRepository,
-            List.of(
-                new PlayerExistsValidator(playerRepository),
-                new FantasyEligibleValidator(playerRepository),
-                new NotAlreadyOnRosterValidator(rosterEntryRepository),
-                new RosterNotFullValidator(rosterEntryRepository, currentFormat)),
-            List.of(
-                new SlotAllowsPositionValidator(playerRepository, currentFormat),
-                new SlotHasRoomValidator(rosterEntryRepository, currentFormat),
-                new InjuredReserveValidator(new InMemoryInjuryRepository()),
-                new LeavingIrNeedsRoomValidator(rosterEntryRepository, currentFormat)))))
+        .standaloneSetup(new RosterEntryController(rosterEntryService))
         .setControllerAdvice(new ApiExceptionHandler())
         .build();
 
-    // Entry ids start at 1 and go up in the order players are added.
     private ResultActions add(long playerId) throws Exception {
         return mvc.perform(post("/roster").contentType(MediaType.APPLICATION_JSON)
             .content("{\"playerId\":" + playerId + ",\"note\":\"\"}"));
@@ -54,48 +47,65 @@ class RosterEntryControllerTest {
             .content("{\"slot\":\"" + slot + "\"}"));
     }
 
+    // ---------- Reading ----------
+
+    @Test
+    void getRoster_returnsEntriesInTheirJsonShape() throws Exception {
+        when(rosterEntryService.getAllEntries())
+            .thenReturn(List.of(new RosterEntry(1L, 28L, "TE", "Monitor snaps")));
+
+        mvc.perform(get("/roster"))
+            .andExpect(status().isOk())
+            .andExpect(content().json(
+                "[{\"id\":1,\"playerId\":28,\"slot\":\"TE\",\"note\":\"Monitor snaps\"}]",
+                JsonCompareMode.STRICT));
+    }
+
     // ---------- Adding ----------
 
     @Test
     void addKnownPlayer_returns201_onTheBench() throws Exception {
+        when(rosterEntryService.createEntry(any())).thenReturn(new RosterEntry(1L, 1L, RosterEntry.BENCH, ""));
+        ArgumentCaptor<RosterEntry> captor = ArgumentCaptor.forClass(RosterEntry.class);
+
         add(1L)
             .andExpect(status().isCreated())
-            .andExpect(jsonPath("$.playerId").value(1))
-            .andExpect(jsonPath("$.slot").value("BENCH"));
+            .andExpect(content().json(
+                "{\"id\":1,\"playerId\":1,\"slot\":\"BENCH\",\"note\":\"\"}", JsonCompareMode.STRICT));
 
-        mvc.perform(get("/roster"))
-            .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].slot").value("BENCH"));
+        verify(rosterEntryService).createEntry(captor.capture());
+        assertEquals(1L, captor.getValue().getPlayerId());
+        assertEquals("", captor.getValue().getNote());
     }
 
     @Test
     void addUnknownPlayer_returns404() throws Exception {
-        add(9999L).andExpect(status().isNotFound());
+        when(rosterEntryService.createEntry(any())).thenThrow(new PlayerNotFoundException(9999L));
+
+        add(9999L)
+            .andExpect(status().isNotFound())
+            .andExpect(jsonPath("$.error").value("Player not found: 9999"));
     }
 
     @Test
     void addPlayerAlreadyOnRoster_returns409() throws Exception {
-        add(1L);
+        when(rosterEntryService.createEntry(any())).thenThrow(new PlayerAlreadyOnRosterException(1L));
 
         add(1L).andExpect(status().isConflict());
     }
 
     @Test
     void addIneligiblePosition_returns400() throws Exception {
-        // LT, DE, CB, KR, PR, H
-        for (long id : new long[] {7L, 391L, 492L, 813L, 770L, 769L}) {
-            add(id)
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Not a fantasy-eligible position."));
-        }
+        when(rosterEntryService.createEntry(any())).thenThrow(new NotFantasyEligibleException());
+
+        add(7L)
+            .andExpect(status().isBadRequest())
+            .andExpect(jsonPath("$.error").value("Not a fantasy-eligible position."));
     }
 
     @Test
     void addPastTheFormatsMaximum_returns409() throws Exception {
-        // 16 QBs, RBs, WRs and TEs from ARI, ATL and BAL.
-        for (long id : new long[] {1, 2, 3, 4, 5, 6, 12, 13, 14, 15, 16, 17, 23, 24, 25, 26}) {
-            add(id).andExpect(status().isCreated());
-        }
+        when(rosterEntryService.createEntry(any())).thenThrow(new RosterFullException(16));
 
         add(34L).andExpect(status().isConflict());
     }
@@ -104,7 +114,7 @@ class RosterEntryControllerTest {
 
     @Test
     void moveIntoAnAllowedSlot_returns200() throws Exception {
-        add(1L); // QB
+        when(rosterEntryService.moveEntry(1L, "QB")).thenReturn(new RosterEntry(1L, 1L, "QB", ""));
 
         move(1, "QB")
             .andExpect(status().isOk())
@@ -112,58 +122,45 @@ class RosterEntryControllerTest {
     }
 
     @Test
-    void moveIntoASlotThePositionIsntAllowedIn_returns409() throws Exception {
-        add(1L); // QB
+    void moveRejectedByARule_returns409() throws Exception {
+        when(rosterEntryService.moveEntry(eq(1L), any()))
+            .thenThrow(new SlotNotAllowedException("A QB can't play RB"));
+        when(rosterEntryService.moveEntry(2L, "QB")).thenThrow(new SlotFullException("QB"));
+        when(rosterEntryService.moveEntry(3L, "IR")).thenThrow(new NoActiveInjuryException(1L));
 
         move(1, "RB").andExpect(status().isConflict());
-    }
-
-    @Test
-    void moveIntoAFilledSlot_returns409() throws Exception {
-        add(1L);  // QB
-        add(12L); // QB
-        move(1, "QB");
-
         move(2, "QB").andExpect(status().isConflict());
-    }
-
-    @Test
-    void moveToIr_withoutAnActiveInjury_returns409() throws Exception {
-        add(1L); // Jacoby Brissett: no injuries
-
-        move(1, "IR").andExpect(status().isConflict());
-    }
-
-    @Test
-    void moveToIr_withAnActiveInjury_returns200() throws Exception {
-        add(28L); // Mark Andrews: an Active ankle sprain
-
-        move(1, "IR")
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.slot").value("IR"));
+        move(3, "IR").andExpect(status().isConflict());
     }
 
     @Test
     void moveMissingEntry_returns404() throws Exception {
+        when(rosterEntryService.moveEntry(999L, "BENCH")).thenThrow(new RosterEntryNotFoundException(999L));
+
         move(999, "BENCH").andExpect(status().isNotFound());
     }
 
-    // ---------- Notes and removing (kept from the watchlist) ----------
+    // ---------- Notes and removing ----------
 
     @Test
-    void updateNote_keepsTheSlot() throws Exception {
-        add(1L);
-        move(1, "QB");
+    void updateNote_returnsTheUpdatedEntry() throws Exception {
+        when(rosterEntryService.updateEntry(eq(1L), any())).thenReturn(new RosterEntry(1L, 1L, "QB", "Monitor snaps"));
+        ArgumentCaptor<RosterEntry> captor = ArgumentCaptor.forClass(RosterEntry.class);
 
         mvc.perform(put("/roster/1").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"note\":\"Monitor snaps\"}"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.note").value("Monitor snaps"))
             .andExpect(jsonPath("$.slot").value("QB"));
+
+        verify(rosterEntryService).updateEntry(eq(1L), captor.capture());
+        assertEquals("Monitor snaps", captor.getValue().getNote());
     }
 
     @Test
     void updateMissingEntry_returns404() throws Exception {
+        when(rosterEntryService.updateEntry(eq(999L), any())).thenThrow(new RosterEntryNotFoundException(999L));
+
         mvc.perform(put("/roster/999").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"note\":\"x\"}"))
             .andExpect(status().isNotFound());
@@ -171,13 +168,15 @@ class RosterEntryControllerTest {
 
     @Test
     void deleteEntry_returns204() throws Exception {
-        add(1L);
-
         mvc.perform(delete("/roster/1")).andExpect(status().isNoContent());
+
+        verify(rosterEntryService).deleteEntry(1L);
     }
 
     @Test
     void deleteMissingEntry_returns404() throws Exception {
+        doThrow(new RosterEntryNotFoundException(999L)).when(rosterEntryService).deleteEntry(999L);
+
         mvc.perform(delete("/roster/999")).andExpect(status().isNotFound());
     }
 }

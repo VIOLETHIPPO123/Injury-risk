@@ -1,20 +1,16 @@
-package com.sidelined.backend.repository;
+package com.sidelined.backend.model;
 
-import com.sidelined.backend.model.RosterFormat;
-import com.sidelined.backend.model.RosterPosition;
-import com.sidelined.backend.model.RosterSlot;
 import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import static com.sidelined.backend.model.RosterPosition.*;
-import static com.sidelined.backend.repository.InMemoryRosterFormatRepository.*;
+import static com.sidelined.backend.model.StandardRosterFormats.*;
 import static org.junit.jupiter.api.Assertions.*;
 
-class InMemoryRosterFormatRepositoryTest {
-
-    private final InMemoryRosterFormatRepository formatRepository = new InMemoryRosterFormatRepository();
+// The format data RosterDataLoader puts in the roster_formats table.
+class StandardRosterFormatsTest {
 
     // Spots per single-position slot, e.g. {QB=1, RB=2, ...}. Flex slots are left out.
     private static Map<RosterPosition, Integer> dedicatedSpots(RosterFormat format) {
@@ -28,28 +24,29 @@ class InMemoryRosterFormatRepositoryTest {
     }
 
     private RosterFormat format(String id) {
-        return formatRepository.findById(id).orElseThrow();
+        return byId(id).orElseThrow();
     }
 
     @Test
-    void findAll_returnsTheThreeFormats() {
-        List<String> ids = formatRepository.findAll().stream().map(RosterFormat::id).toList();
+    void all_returnsTheThreeFormats_inDisplayOrder() {
+        List<String> ids = all().stream().map(RosterFormat::id).toList();
 
         assertEquals(List.of(ESPN_STANDARD, YAHOO_STANDARD, SLEEPER_DEFAULT), ids);
+        assertEquals(List.of(1, 2, 3), all().stream().map(RosterFormat::displayOrder).toList());
     }
 
     @Test
     void everyFormat_starts1Qb2Rb2Wr1Te1K1Def() {
         Map<RosterPosition, Integer> expected = Map.of(QB, 1, RB, 2, WR, 2, TE, 1, K, 1, DEF, 1);
 
-        for (RosterFormat format : formatRepository.findAll()) {
+        for (RosterFormat format : all()) {
             assertEquals(expected, dedicatedSpots(format), format.name());
         }
     }
 
     @Test
     void everyFormat_startersPlusBenchEqualsMaxRosterSize() {
-        for (RosterFormat format : formatRepository.findAll()) {
+        for (RosterFormat format : all()) {
             int starters = format.slots().stream().mapToInt(RosterSlot::count).sum();
             assertEquals(format.maxRosterSize(), starters + format.benchCount(), format.name());
         }
@@ -98,7 +95,7 @@ class InMemoryRosterFormatRepositoryTest {
     }
 
     @Test
-    void findById_unknownFormat_returnsEmpty() {
-        assertTrue(formatRepository.findById("nope").isEmpty());
+    void byId_unknownFormat_returnsEmpty() {
+        assertTrue(byId("nope").isEmpty());
     }
 }

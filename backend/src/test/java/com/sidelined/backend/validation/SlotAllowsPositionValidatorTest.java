@@ -3,19 +3,23 @@ package com.sidelined.backend.validation;
 import com.sidelined.backend.exception.SlotNotAllowedException;
 import com.sidelined.backend.model.RosterEntry;
 import com.sidelined.backend.repository.InMemoryPlayerRepository;
-import com.sidelined.backend.repository.InMemoryRosterFormatRepository;
-import com.sidelined.backend.repository.InMemoryRosterSettingsRepository;
 import com.sidelined.backend.service.CurrentRosterFormat;
 import org.junit.jupiter.api.Test;
 
+import static com.sidelined.backend.model.StandardRosterFormats.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
 class SlotAllowsPositionValidatorTest {
 
+    private final CurrentRosterFormat currentFormat = mock(CurrentRosterFormat.class);
+    private final SlotAllowsPositionValidator validator =
+        new SlotAllowsPositionValidator(new InMemoryPlayerRepository(), currentFormat);
+
     // ESPN Standard, the default format.
-    private final SlotAllowsPositionValidator validator = new SlotAllowsPositionValidator(
-        new InMemoryPlayerRepository(),
-        new CurrentRosterFormat(new InMemoryRosterFormatRepository(), new InMemoryRosterSettingsRepository()));
+    SlotAllowsPositionValidatorTest() {
+        when(currentFormat.get()).thenReturn(byId(ESPN_STANDARD).orElseThrow());
+    }
 
     private static RosterEntry onBench(long playerId) {
         return new RosterEntry(1L, playerId, RosterEntry.BENCH, "");

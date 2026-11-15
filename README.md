@@ -24,7 +24,10 @@ cp .env.example .env   # then fill in the values
 ./mvnw spring-boot:run
 ```
 
-On startup Hibernate creates or updates the `teams` and `players` tables and loads the 32 teams.
+On startup Hibernate creates or updates the `teams`, `players`, `roster_entries`, `roster_settings`,
+`roster_formats` and `roster_format_slots` tables. It loads the 32 teams and the three roster formats,
+adding only what's missing, so a restart never duplicates them. A format already in the table isn't
+updated from the code; to change one, edit or delete its row.
 The `players` table stays empty until the player sync job (DEV-102) runs; to test before then,
 add a few rows in the Supabase Table Editor.
 

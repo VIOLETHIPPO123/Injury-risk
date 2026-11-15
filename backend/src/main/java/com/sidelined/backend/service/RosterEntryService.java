@@ -1,7 +1,10 @@
 package com.sidelined.backend.service;
 
+import com.sidelined.backend.exception.PlayerNotFoundException;
 import com.sidelined.backend.exception.RosterEntryNotFoundException;
+import com.sidelined.backend.model.Player;
 import com.sidelined.backend.model.RosterEntry;
+import com.sidelined.backend.repository.PlayerRepository;
 import com.sidelined.backend.repository.RosterEntryRepository;
 import com.sidelined.backend.validation.RosterEntryValidator;
 import com.sidelined.backend.validation.SlotMoveValidator;
@@ -12,16 +15,19 @@ import java.util.List;
 @Service
 public class RosterEntryService {
 
-    // DIP: depends on abstractions. Swapping in a database never touches this class.
+    // DIP: depends on abstractions, not on JPA.
     private final RosterEntryRepository rosterEntryRepository;
+    private final PlayerRepository playerRepository;
     // OCP: every validator Spring finds. A new rule is a new class, not an edit here.
     private final List<RosterEntryValidator> validators;
     private final List<SlotMoveValidator> moveValidators;
 
     public RosterEntryService(RosterEntryRepository rosterEntryRepository,
+                              PlayerRepository playerRepository,
                               List<RosterEntryValidator> validators,
                               List<SlotMoveValidator> moveValidators) {
         this.rosterEntryRepository = rosterEntryRepository;
+        this.playerRepository = playerRepository;
         this.validators = validators;
         this.moveValidators = moveValidators;
     }
@@ -36,9 +42,13 @@ public class RosterEntryService {
     public RosterEntry createEntry(RosterEntry request) {
         validators.forEach(validator -> validator.validate(request));
 
-        // The repository assigns ids; ignore any the client sent. New players start on the bench.
-        RosterEntry entry = new RosterEntry(null, request.getPlayerId(), RosterEntry.BENCH, request.getNote());
-        return rosterEntryRepository.save(entry);
+        // PlayerExistsValidator has already checked the player is there; this fetches it to link to.
+        Long playerId = request.getPlayerId();
+        Player player = playerRepository.findById(playerId)
+            .orElseThrow(() -> new PlayerNotFoundException(playerId));
+
+        // The database assigns ids; ignore any the client sent. New players start on the bench.
+        return rosterEntryRepository.save(new RosterEntry(player, RosterEntry.BENCH, request.getNote()));
     }
 
     public RosterEntry updateEntry(Long id, RosterEntry changes) {

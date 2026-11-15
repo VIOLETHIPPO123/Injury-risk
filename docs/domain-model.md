@@ -55,15 +55,18 @@ external-API-backed implementation.
 
 | Attribute | Type | Notes |
 |---|---|---|
-| id | Long | Assigned by the repository |
-| playerId | Long | References `Player.id`; validated to exist on create |
+| id | Long | Assigned by the database |
+| player | Player | `@ManyToOne` link (column `player_id`, a foreign key to `players`); not in the JSON |
+| playerId | Long | The same `player_id` column, read-only; what the JSON shows and what a POST body sends. Validated to exist on create |
 | slot | String | A starting slot of the league's format (a `RosterSlot` name, e.g. `"RB"`), `BENCH` or `IR`. New players start on `BENCH` |
 | note | String | Free text; editable after creation |
 
 Served at `/roster` (CRUD, plus `PUT /roster/{id}/slot` to move a player).
-Persisted through the `RosterEntryRepository` interface. Today's
-implementation, `InMemoryRosterEntryRepository`, is an in-memory
-`ConcurrentHashMap` (data resets when the backend restarts). The rules live
+Persisted through the `RosterEntryRepository` interface, implemented by
+`JpaRosterEntryRepository` (the `roster_entries` table). The league's format
+is in `roster_settings` (one row) and the formats themselves in the read-only
+`roster_formats` / `roster_format_slots` tables, which `RosterDataLoader` fills
+from `StandardRosterFormats` at startup. The rules live
 in one validator class each: `RosterEntryValidator`s for adding (player
 exists, fantasy-eligible position, not already rostered, roster not full),
 `SlotMoveValidator`s for moving (slot allows the position, slot has room, IR
@@ -156,7 +159,7 @@ eventually need to exist.
 | From | To | Multiplicity | Notes |
 |---|---|---|---|
 | Team | Player | 1 → * | By matching `Player.team` (string code) to `Team.code` — a soft/logical reference, not an enforced foreign key (no database yet) |
-| Player | RosterEntry | 1 → 0..1 | Via `RosterEntry.playerId`; validated against `PlayerRepository` on create (and a player can be rostered once), but not a real FK constraint |
+| Player | RosterEntry | 1 → 0..1 | Via `RosterEntry.player` (`@ManyToOne`); a foreign key on `roster_entries.player_id`, so a rostered player can't be deleted. A player can be rostered once (checked by `NotAlreadyOnRosterValidator`) |
 | Division/Conference | Team | 1 → * | Static grouping only, defined in frontend data, not derivable from `Team` itself |
 | Player | WorkloadRatio | 1 → 1 (derived) | Computed per player per request from that player's two snap-count fields |
 | WorkloadRatio | RiskLevel | 1 → 1 (derived) | Pure function of the ratio value; no independent identity |

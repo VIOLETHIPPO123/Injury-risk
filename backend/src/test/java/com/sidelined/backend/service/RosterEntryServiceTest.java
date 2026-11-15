@@ -3,7 +3,12 @@ package com.sidelined.backend.service;
 import com.sidelined.backend.exception.PlayerNotFoundException;
 import com.sidelined.backend.exception.RosterEntryNotFoundException;
 import com.sidelined.backend.exception.SlotFullException;
+import com.sidelined.backend.model.NflTeam;
+import com.sidelined.backend.model.Player;
+import com.sidelined.backend.model.Position;
 import com.sidelined.backend.model.RosterEntry;
+import com.sidelined.backend.model.Workload;
+import com.sidelined.backend.repository.PlayerRepository;
 import com.sidelined.backend.repository.RosterEntryRepository;
 import com.sidelined.backend.validation.RosterEntryValidator;
 import com.sidelined.backend.validation.SlotMoveValidator;
@@ -27,6 +32,9 @@ class RosterEntryServiceTest {
     private RosterEntryRepository rosterEntryRepository;
 
     @Mock
+    private PlayerRepository playerRepository;
+
+    @Mock
     private RosterEntryValidator validator;
 
     @Mock
@@ -36,7 +44,15 @@ class RosterEntryServiceTest {
 
     @BeforeEach
     void setUp() {
-        rosterEntryService = new RosterEntryService(rosterEntryRepository, List.of(validator), List.of(moveValidator));
+        rosterEntryService = new RosterEntryService(
+            rosterEntryRepository, playerRepository, List.of(validator), List.of(moveValidator));
+    }
+
+    private static final Player BRISSETT =
+        new Player(1L, "Jacoby Brissett", NflTeam.ARI, Position.QB, new Workload(68, 253));
+
+    private void playerExists(Player player) {
+        when(playerRepository.findById(player.getId())).thenReturn(Optional.of(player));
     }
 
     // Mimics the real repository: assigns id 42 to any entry saved without one.
@@ -83,6 +99,7 @@ class RosterEntryServiceTest {
     @Test
     void createEntry_validPlayer_savesAndReturnsEntryWithId() {
         // Arrange
+        playerExists(BRISSETT);
         stubSaveAssigningId();
         RosterEntry request = new RosterEntry(null, 1L, null, "Monitor snaps");
 
@@ -97,8 +114,37 @@ class RosterEntryServiceTest {
     }
 
     @Test
+    void createEntry_linksTheSavedEntryToThePlayer() {
+        // Arrange
+        playerExists(BRISSETT);
+        stubSaveAssigningId();
+        ArgumentCaptor<RosterEntry> captor = ArgumentCaptor.forClass(RosterEntry.class);
+
+        // Act
+        rosterEntryService.createEntry(new RosterEntry(null, 1L, null, ""));
+
+        // Assert — the player link is what the database stores as the foreign key.
+        verify(rosterEntryRepository).save(captor.capture());
+        assertSame(BRISSETT, captor.getValue().getPlayer());
+    }
+
+    @Test
+    void createEntry_playerGoneAfterValidation_throwsNotFoundAndDoesNotSave() {
+        // Arrange — the validators passed, but the player is no longer in the table.
+        when(playerRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Act
+        assertThrows(PlayerNotFoundException.class,
+            () -> rosterEntryService.createEntry(new RosterEntry(null, 1L, null, "")));
+
+        // Assert
+        verify(rosterEntryRepository, never()).save(any());
+    }
+
+    @Test
     void createEntry_newPlayer_goesOnTheBench() {
         // Arrange
+        playerExists(BRISSETT);
         stubSaveAssigningId();
         RosterEntry request = new RosterEntry(null, 1L, "QB", "Trying to start right away");
 
@@ -112,6 +158,7 @@ class RosterEntryServiceTest {
     @Test
     void createEntry_clientSuppliedId_isIgnored() {
         // Arrange
+        playerExists(BRISSETT);
         stubSaveAssigningId();
         RosterEntry request = new RosterEntry(999L, 1L, null, "Trying to pick my own id");
         ArgumentCaptor<RosterEntry> captor = ArgumentCaptor.forClass(RosterEntry.class);
@@ -134,6 +181,7 @@ class RosterEntryServiceTest {
         // Act + Assert
         assertThrows(PlayerNotFoundException.class, () -> rosterEntryService.createEntry(request));
         verify(rosterEntryRepository, never()).save(any());
+        verifyNoInteractions(playerRepository);
     }
 
     // ---------- updateEntry ----------

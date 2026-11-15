@@ -9,7 +9,10 @@ import com.sidelined.backend.repository.RosterFormatRepository;
 import com.sidelined.backend.repository.RosterSettingsRepository;
 import com.sidelined.backend.validation.FormatChangeValidator;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class RosterService {
@@ -30,8 +33,11 @@ public class RosterService {
         this.formatChangeValidators = formatChangeValidators;
     }
 
+    // A table has no order of its own, so sort to keep ESPN, Yahoo, Sleeper.
     public List<RosterFormat> getFormats() {
-        return formatRepository.findAll();
+        return formatRepository.findAll().stream()
+            .sorted(Comparator.comparingInt(RosterFormat::displayOrder))
+            .toList();
     }
 
     public RosterSettings getSettings() {
@@ -39,10 +45,13 @@ public class RosterService {
     }
 
     // The old slots may not exist in the new format, so a switch moves every player to the bench.
+    // One transaction: either the bench moves and the new format are both saved, or neither is.
+    @Transactional
     public RosterSettings updateSettings(RosterSettings request) {
         String formatId = request.formatId();
         // SRP: a domain exception. ApiExceptionHandler decides it becomes a 400.
-        RosterFormat format = formatRepository.findById(formatId)
+        RosterFormat format = Optional.ofNullable(formatId)
+            .flatMap(formatRepository::findById)
             .orElseThrow(() -> new UnknownRosterFormatException(formatId));
         formatChangeValidators.forEach(validator -> validator.validate(format));
 
