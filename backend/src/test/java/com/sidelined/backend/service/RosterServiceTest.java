@@ -2,6 +2,7 @@ package com.sidelined.backend.service;
 
 import com.sidelined.backend.exception.RosterTooBigForFormatException;
 import com.sidelined.backend.exception.UnknownRosterFormatException;
+import com.sidelined.backend.model.Profile;
 import com.sidelined.backend.model.RosterEntry;
 import com.sidelined.backend.model.RosterFormat;
 import com.sidelined.backend.model.RosterSettings;
@@ -21,10 +22,14 @@ import java.util.Optional;
 import static com.sidelined.backend.model.StandardRosterFormats.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class RosterServiceTest {
+
+    // The signed-in user.
+    private static final String USER = "user-a";
 
     @Mock
     private RosterFormatRepository formatRepository;
@@ -36,6 +41,9 @@ class RosterServiceTest {
     private RosterEntryRepository rosterEntryRepository;
 
     @Mock
+    private ProfileService profileService;
+
+    @Mock
     private FormatChangeValidator formatChangeValidator;
 
     private RosterService rosterService;
@@ -43,7 +51,7 @@ class RosterServiceTest {
     @BeforeEach
     void setUp() {
         rosterService = new RosterService(formatRepository, settingsRepository,
-            rosterEntryRepository, List.of(formatChangeValidator));
+            rosterEntryRepository, profileService, List.of(formatChangeValidator));
     }
 
     private void formatExists(String id) {
@@ -70,10 +78,10 @@ class RosterServiceTest {
     @Test
     void getSettings_returnsTheStoredSettings() {
         // Arrange
-        when(settingsRepository.get()).thenReturn(new RosterSettings(YAHOO_STANDARD));
+        when(settingsRepository.getFor(USER)).thenReturn(new RosterSettings(YAHOO_STANDARD));
 
         // Act + Assert
-        assertEquals(YAHOO_STANDARD, rosterService.getSettings().formatId());
+        assertEquals(YAHOO_STANDARD, rosterService.getSettings(USER).formatId());
     }
 
     // ---------- updateSettings ----------
@@ -82,12 +90,12 @@ class RosterServiceTest {
     void updateSettings_knownFormat_isSaved() {
         // Arrange
         formatExists(SLEEPER_DEFAULT);
-        when(rosterEntryRepository.findAll()).thenReturn(List.of());
+        when(rosterEntryRepository.findByProfileId(USER)).thenReturn(List.of());
         when(settingsRepository.save(any(RosterSettings.class))).thenAnswer(invocation -> invocation.getArgument(0));
         ArgumentCaptor<RosterSettings> captor = ArgumentCaptor.forClass(RosterSettings.class);
 
         // Act
-        RosterSettings result = rosterService.updateSettings(new RosterSettings(SLEEPER_DEFAULT));
+        RosterSettings result = rosterService.updateSettings(USER, new RosterSettings(SLEEPER_DEFAULT));
 
         // Assert
         verify(settingsRepository).save(captor.capture());
@@ -99,14 +107,14 @@ class RosterServiceTest {
     void updateSettings_runsTheFormatChangeRulesAgainstTheNewFormat() {
         // Arrange
         formatExists(YAHOO_STANDARD);
-        when(rosterEntryRepository.findAll()).thenReturn(List.of());
+        when(rosterEntryRepository.findByProfileId(USER)).thenReturn(List.of());
         ArgumentCaptor<RosterFormat> captor = ArgumentCaptor.forClass(RosterFormat.class);
 
         // Act
-        rosterService.updateSettings(new RosterSettings(YAHOO_STANDARD));
+        rosterService.updateSettings(USER, new RosterSettings(YAHOO_STANDARD));
 
         // Assert
-        verify(formatChangeValidator).validate(captor.capture());
+        verify(formatChangeValidator).validate(eq(USER), captor.capture());
         assertEquals(YAHOO_STANDARD, captor.getValue().id());
     }
 
@@ -117,7 +125,7 @@ class RosterServiceTest {
 
         // Act
         assertThrows(UnknownRosterFormatException.class,
-            () -> rosterService.updateSettings(new RosterSettings("nope")));
+            () -> rosterService.updateSettings(USER, new RosterSettings("nope")));
 
         // Assert
         verify(settingsRepository, never()).save(any());
@@ -128,7 +136,7 @@ class RosterServiceTest {
     void updateSettings_missingFormat_throwsWithoutAskingTheRepository() {
         // Act
         assertThrows(UnknownRosterFormatException.class,
-            () -> rosterService.updateSettings(new RosterSettings(null)));
+            () -> rosterService.updateSettings(USER, new RosterSettings(null)));
 
         // Assert — JPA refuses to look up a null id, so it must never be asked.
         verifyNoInteractions(formatRepository);
@@ -142,10 +150,10 @@ class RosterServiceTest {
             new RosterEntry(1L, 1L, "QB", ""),
             new RosterEntry(2L, 2L, "RB", ""),
             new RosterEntry(3L, 28L, RosterEntry.IR, ""));
-        when(rosterEntryRepository.findAll()).thenReturn(roster);
+        when(rosterEntryRepository.findByProfileId(USER)).thenReturn(roster);
 
         // Act
-        rosterService.updateSettings(new RosterSettings(YAHOO_STANDARD));
+        rosterService.updateSettings(USER, new RosterSettings(YAHOO_STANDARD));
 
         // Assert
         assertTrue(roster.stream().allMatch(e -> RosterEntry.BENCH.equals(e.getSlot())));
@@ -157,14 +165,64 @@ class RosterServiceTest {
         // Arrange
         formatExists(YAHOO_STANDARD);
         doThrow(new RosterTooBigForFormatException("Yahoo Standard", 15, 16))
-            .when(formatChangeValidator).validate(any());
+            .when(formatChangeValidator).validate(any(), any());
 
         // Act
         assertThrows(RosterTooBigForFormatException.class,
-            () -> rosterService.updateSettings(new RosterSettings(YAHOO_STANDARD)));
+            () -> rosterService.updateSettings(USER, new RosterSettings(YAHOO_STANDARD)));
 
         // Assert
         verify(rosterEntryRepository, never()).save(any());
         verify(settingsRepository, never()).save(any());
+    }
+
+    // ---------- One row per user ----------
+
+    @Test
+    void updateSettings_firstChoice_savesANewRowLinkedToTheUsersProfile() {
+        // Arrange — USER has never chosen a format.
+        Profile profile = new Profile(USER);
+        formatExists(YAHOO_STANDARD);
+        when(settingsRepository.findByProfileId(USER)).thenReturn(Optional.empty());
+        when(profileService.getOrCreate(USER)).thenReturn(profile);
+        when(settingsRepository.save(any(RosterSettings.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // Act
+        rosterService.updateSettings(USER, new RosterSettings(YAHOO_STANDARD));
+
+        // Assert
+        ArgumentCaptor<RosterSettings> captor = ArgumentCaptor.forClass(RosterSettings.class);
+        verify(settingsRepository).save(captor.capture());
+        assertSame(profile, captor.getValue().profile());
+        assertEquals(YAHOO_STANDARD, captor.getValue().formatId());
+    }
+
+    @Test
+    void updateSettings_laterChoice_updatesTheUsersExistingRow() {
+        // Arrange — USER already has a row.
+        RosterSettings existing = new RosterSettings(new Profile(USER), ESPN_STANDARD);
+        formatExists(SLEEPER_DEFAULT);
+        when(settingsRepository.findByProfileId(USER)).thenReturn(Optional.of(existing));
+
+        // Act
+        rosterService.updateSettings(USER, new RosterSettings(SLEEPER_DEFAULT));
+
+        // Assert — the same row, not a second one.
+        verify(settingsRepository).save(existing);
+        assertEquals(SLEEPER_DEFAULT, existing.formatId());
+        verifyNoInteractions(profileService);
+    }
+
+    @Test
+    void updateSettings_benchesOnlyTheUsersOwnPlayers() {
+        // Arrange
+        formatExists(YAHOO_STANDARD);
+
+        // Act
+        rosterService.updateSettings(USER, new RosterSettings(YAHOO_STANDARD));
+
+        // Assert — other users' entries are never even read.
+        verify(rosterEntryRepository).findByProfileId(USER);
+        verify(rosterEntryRepository, never()).findAll();
     }
 }

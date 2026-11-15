@@ -12,13 +12,16 @@ import static org.mockito.Mockito.*;
 
 class SlotAllowsPositionValidatorTest {
 
+    // The signed-in user whose roster is being checked.
+    private static final String USER = "user-a";
+
     private final CurrentRosterFormat currentFormat = mock(CurrentRosterFormat.class);
     private final SlotAllowsPositionValidator validator =
         new SlotAllowsPositionValidator(new InMemoryPlayerRepository(), currentFormat);
 
     // ESPN Standard, the default format.
     SlotAllowsPositionValidatorTest() {
-        when(currentFormat.get()).thenReturn(byId(ESPN_STANDARD).orElseThrow());
+        when(currentFormat.get(USER)).thenReturn(byId(ESPN_STANDARD).orElseThrow());
     }
 
     private static RosterEntry onBench(long playerId) {
@@ -27,28 +30,28 @@ class SlotAllowsPositionValidatorTest {
 
     @Test
     void validate_positionListedInTheSlot_passes() {
-        assertDoesNotThrow(() -> validator.validate(onBench(1L), "QB"));   // QB
-        assertDoesNotThrow(() -> validator.validate(onBench(6L), "FLEX")); // TE
-        assertDoesNotThrow(() -> validator.validate(onBench(84L), "RB"));  // FB counts as RB
-        assertDoesNotThrow(() -> validator.validate(onBench(791L), "K"));  // PK counts as K
+        assertDoesNotThrow(() -> validator.validate(USER, onBench(1L), "QB"));   // QB
+        assertDoesNotThrow(() -> validator.validate(USER, onBench(6L), "FLEX")); // TE
+        assertDoesNotThrow(() -> validator.validate(USER, onBench(84L), "RB"));  // FB counts as RB
+        assertDoesNotThrow(() -> validator.validate(USER, onBench(791L), "K"));  // PK counts as K
     }
 
     @Test
     void validate_positionNotListedInTheSlot_throws() {
-        assertThrows(SlotNotAllowedException.class, () -> validator.validate(onBench(1L), "RB"));
-        assertThrows(SlotNotAllowedException.class, () -> validator.validate(onBench(1L), "FLEX"));
-        assertThrows(SlotNotAllowedException.class, () -> validator.validate(onBench(3L), "DEF"));
+        assertThrows(SlotNotAllowedException.class, () -> validator.validate(USER, onBench(1L), "RB"));
+        assertThrows(SlotNotAllowedException.class, () -> validator.validate(USER, onBench(1L), "FLEX"));
+        assertThrows(SlotNotAllowedException.class, () -> validator.validate(USER, onBench(3L), "DEF"));
     }
 
     @Test
     void validate_benchAndIr_takeAnyone() {
-        assertDoesNotThrow(() -> validator.validate(onBench(1L), RosterEntry.BENCH));
-        assertDoesNotThrow(() -> validator.validate(onBench(1L), RosterEntry.IR));
+        assertDoesNotThrow(() -> validator.validate(USER, onBench(1L), RosterEntry.BENCH));
+        assertDoesNotThrow(() -> validator.validate(USER, onBench(1L), RosterEntry.IR));
     }
 
     @Test
     void validate_slotTheFormatDoesntHave_throws() {
-        assertThrows(SlotNotAllowedException.class, () -> validator.validate(onBench(1L), "SUPERFLEX"));
-        assertThrows(SlotNotAllowedException.class, () -> validator.validate(onBench(1L), null));
+        assertThrows(SlotNotAllowedException.class, () -> validator.validate(USER, onBench(1L), "SUPERFLEX"));
+        assertThrows(SlotNotAllowedException.class, () -> validator.validate(USER, onBench(1L), null));
     }
 }

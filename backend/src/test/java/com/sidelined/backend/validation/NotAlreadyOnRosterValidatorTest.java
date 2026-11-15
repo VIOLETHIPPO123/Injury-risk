@@ -11,21 +11,24 @@ import static org.mockito.Mockito.*;
 
 class NotAlreadyOnRosterValidatorTest {
 
+    // The signed-in user whose roster is being checked.
+    private static final String USER = "user-a";
+
     private final RosterEntryRepository rosterEntryRepository = mock(RosterEntryRepository.class);
     private final NotAlreadyOnRosterValidator validator = new NotAlreadyOnRosterValidator(rosterEntryRepository);
 
     @Test
     void validate_playerNotOnRoster_passes() {
-        when(rosterEntryRepository.findAll()).thenReturn(List.of(new RosterEntry(1L, 2L, RosterEntry.BENCH, "")));
+        when(rosterEntryRepository.findByProfileId(USER)).thenReturn(List.of(new RosterEntry(1L, 2L, RosterEntry.BENCH, "")));
 
-        assertDoesNotThrow(() -> validator.validate(new RosterEntry(null, 1L, null, "")));
+        assertDoesNotThrow(() -> validator.validate(USER, new RosterEntry(null, 1L, null, "")));
     }
 
     @Test
     void validate_playerAlreadyOnRoster_throws() {
-        when(rosterEntryRepository.findAll()).thenReturn(List.of(new RosterEntry(1L, 1L, RosterEntry.BENCH, "")));
+        when(rosterEntryRepository.findByProfileId(USER)).thenReturn(List.of(new RosterEntry(1L, 1L, RosterEntry.BENCH, "")));
 
         assertThrows(PlayerAlreadyOnRosterException.class,
-            () -> validator.validate(new RosterEntry(null, 1L, null, "")));
+            () -> validator.validate(USER, new RosterEntry(null, 1L, null, "")));
     }
 }

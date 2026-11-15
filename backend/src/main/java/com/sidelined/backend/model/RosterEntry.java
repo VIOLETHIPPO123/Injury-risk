@@ -12,8 +12,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
-// A player on the user's fantasy roster, the slot they fill, and a free-text note.
-// The slot is one of the league format's starting slots (by RosterSlot name, e.g. "RB"),
+// A player on one user's fantasy roster, the slot they fill, and a free-text note.
+// The slot is one of that user's format's starting slots (by RosterSlot name, e.g. "RB"),
 // BENCH or IR.
 @JsonPropertyOrder({"id", "playerId", "slot", "note"})
 @Entity
@@ -26,6 +26,12 @@ public class RosterEntry {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    // Whose roster this is. Never in the JSON: the owner always comes from the sign-in token.
+    @JsonIgnore
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "profile_id", nullable = false)
+    private Profile profile;
 
     // The link to the players table. Its foreign key stops a rostered player from being deleted.
     @JsonIgnore
@@ -49,16 +55,23 @@ public class RosterEntry {
     public RosterEntry() {
     }
 
-    // A new entry, ready to save. The database assigns the id.
-    public RosterEntry(Player player, String slot, String note) {
+    // A new entry on `profile`'s roster, ready to save. The database assigns the id.
+    // A named factory rather than a public constructor: a second public four-argument
+    // constructor would make `new RosterEntry(null, null, ...)` ambiguous.
+    public static RosterEntry onRosterOf(Profile profile, Player player, String slot, String note) {
+        return new RosterEntry(profile, player, slot, note);
+    }
+
+    private RosterEntry(Profile profile, Player player, String slot, String note) {
+        this.profile = profile;
         this.player = player;
         this.playerId = player.getId();
         this.slot = slot;
         this.note = note;
     }
 
-    // A request or test value that names its player by id only. It has no player link,
-    // so it can't be saved: RosterEntryService looks the player up and uses the constructor above.
+    // A request or test value that names its player by id only. It has no player or owner link,
+    // so it can't be saved: RosterEntryService looks both up and uses the constructor above.
     public RosterEntry(Long id, Long playerId, String slot, String note) {
         this.id = id;
         this.playerId = playerId;
@@ -68,6 +81,8 @@ public class RosterEntry {
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
+    public Profile getProfile() { return profile; }
 
     public Player getPlayer() { return player; }
 

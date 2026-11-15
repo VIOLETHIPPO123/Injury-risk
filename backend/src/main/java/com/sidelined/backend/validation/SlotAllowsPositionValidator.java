@@ -28,11 +28,11 @@ public class SlotAllowsPositionValidator implements SlotMoveValidator {
     }
 
     @Override
-    public void validate(RosterEntry entry, String slot) {
+    public void validate(String userId, RosterEntry entry, String slot) {
         if (RosterEntry.BENCH.equals(slot) || RosterEntry.IR.equals(slot)) {
             return;
         }
-        RosterFormat format = currentFormat.get();
+        RosterFormat format = currentFormat.get(userId);
         RosterSlot target = format.findSlot(slot).orElseThrow(
             () -> new SlotNotAllowedException(format.name() + " has no " + slot + " slot"));
 

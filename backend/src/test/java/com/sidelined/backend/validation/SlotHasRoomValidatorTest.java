@@ -14,6 +14,9 @@ import static org.mockito.Mockito.*;
 
 class SlotHasRoomValidatorTest {
 
+    // The signed-in user whose roster is being checked.
+    private static final String USER = "user-a";
+
     // The roster the mocked repository returns. Tests add to it.
     private final List<RosterEntry> roster = new ArrayList<>();
     private final RosterEntryRepository rosterEntryRepository = mock(RosterEntryRepository.class);
@@ -21,8 +24,8 @@ class SlotHasRoomValidatorTest {
     private final SlotHasRoomValidator validator = new SlotHasRoomValidator(rosterEntryRepository, currentFormat);
 
     SlotHasRoomValidatorTest() {
-        when(rosterEntryRepository.findAll()).thenReturn(roster);
-        when(currentFormat.get()).thenReturn(byId(ESPN_STANDARD).orElseThrow());
+        when(rosterEntryRepository.findByProfileId(USER)).thenReturn(roster);
+        when(currentFormat.get(USER)).thenReturn(byId(ESPN_STANDARD).orElseThrow());
     }
 
     // Entry ids go up from 1 in the order players are added, as the database assigns them.
@@ -33,7 +36,7 @@ class SlotHasRoomValidatorTest {
     }
 
     private void leagueIsOn(String formatId) {
-        when(currentFormat.get()).thenReturn(byId(formatId).orElseThrow());
+        when(currentFormat.get(USER)).thenReturn(byId(formatId).orElseThrow());
     }
 
     @Test
@@ -41,7 +44,7 @@ class SlotHasRoomValidatorTest {
         rostered(2L, "RB");
         RosterEntry mover = rostered(13L, RosterEntry.BENCH);
 
-        assertDoesNotThrow(() -> validator.validate(mover, "RB")); // RB holds 2
+        assertDoesNotThrow(() -> validator.validate(USER, mover, "RB")); // RB holds 2
     }
 
     @Test
@@ -49,14 +52,14 @@ class SlotHasRoomValidatorTest {
         rostered(1L, "QB");
         RosterEntry mover = rostered(12L, RosterEntry.BENCH);
 
-        assertThrows(SlotFullException.class, () -> validator.validate(mover, "QB"));
+        assertThrows(SlotFullException.class, () -> validator.validate(USER, mover, "QB"));
     }
 
     @Test
     void validate_theSlotThePlayerIsAlreadyIn_passes() {
         RosterEntry mover = rostered(1L, "QB");
 
-        assertDoesNotThrow(() -> validator.validate(mover, "QB"));
+        assertDoesNotThrow(() -> validator.validate(USER, mover, "QB"));
     }
 
     @Test
@@ -65,9 +68,9 @@ class SlotHasRoomValidatorTest {
         RosterEntry mover = rostered(70L, RosterEntry.BENCH);
 
         // ESPN Standard has 1 IR spot, Yahoo Standard 2.
-        assertThrows(SlotFullException.class, () -> validator.validate(mover, RosterEntry.IR));
+        assertThrows(SlotFullException.class, () -> validator.validate(USER, mover, RosterEntry.IR));
         leagueIsOn(YAHOO_STANDARD);
-        assertDoesNotThrow(() -> validator.validate(mover, RosterEntry.IR));
+        assertDoesNotThrow(() -> validator.validate(USER, mover, RosterEntry.IR));
     }
 
     @Test
@@ -75,7 +78,7 @@ class SlotHasRoomValidatorTest {
         leagueIsOn(SLEEPER_DEFAULT);
         RosterEntry mover = rostered(28L, RosterEntry.BENCH);
 
-        assertThrows(SlotFullException.class, () -> validator.validate(mover, RosterEntry.IR));
+        assertThrows(SlotFullException.class, () -> validator.validate(USER, mover, RosterEntry.IR));
     }
 
     @Test
@@ -85,7 +88,7 @@ class SlotHasRoomValidatorTest {
         }
         RosterEntry mover = rostered(1L, "QB");
 
-        assertDoesNotThrow(() -> validator.validate(mover, RosterEntry.BENCH));
+        assertDoesNotThrow(() -> validator.validate(USER, mover, RosterEntry.BENCH));
         verifyNoInteractions(currentFormat);
     }
 }

@@ -8,7 +8,8 @@ import com.sidelined.backend.service.CurrentRosterFormat;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-// Rule: no adding past the format's maximum. Players on IR don't count toward it.
+// Rule: no adding past the maximum of the user's format. Players on IR don't count toward it,
+// and neither does anyone on another user's roster.
 @Component
 @Order(4)
 public class RosterNotFullValidator implements RosterEntryValidator {
@@ -23,9 +24,9 @@ public class RosterNotFullValidator implements RosterEntryValidator {
     }
 
     @Override
-    public void validate(RosterEntry request) {
-        RosterFormat format = currentFormat.get();
-        long counted = rosterEntryRepository.findAll().stream()
+    public void validate(String userId, RosterEntry request) {
+        RosterFormat format = currentFormat.get(userId);
+        long counted = rosterEntryRepository.findByProfileId(userId).stream()
             .filter(e -> !RosterEntry.IR.equals(e.getSlot()))
             .count();
         if (counted >= format.maxRosterSize()) {

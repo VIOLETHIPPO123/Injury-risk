@@ -14,6 +14,9 @@ import static org.mockito.Mockito.*;
 
 class RosterNotFullValidatorTest {
 
+    // The signed-in user whose roster is being checked.
+    private static final String USER = "user-a";
+
     // The roster the mocked repository returns. Tests add to it.
     private final List<RosterEntry> roster = new ArrayList<>();
     private final RosterEntryRepository rosterEntryRepository = mock(RosterEntryRepository.class);
@@ -23,8 +26,8 @@ class RosterNotFullValidatorTest {
     private static final RosterEntry REQUEST = new RosterEntry(null, 999L, null, "");
 
     RosterNotFullValidatorTest() {
-        when(rosterEntryRepository.findAll()).thenReturn(roster);
-        when(currentFormat.get()).thenReturn(byId(ESPN_STANDARD).orElseThrow());
+        when(rosterEntryRepository.findByProfileId(USER)).thenReturn(roster);
+        when(currentFormat.get(USER)).thenReturn(byId(ESPN_STANDARD).orElseThrow());
     }
 
     private void fill(int players, String slot) {
@@ -38,14 +41,14 @@ class RosterNotFullValidatorTest {
     void validate_belowTheMaximum_passes() {
         fill(15, RosterEntry.BENCH); // ESPN Standard holds 16
 
-        assertDoesNotThrow(() -> validator.validate(REQUEST));
+        assertDoesNotThrow(() -> validator.validate(USER, REQUEST));
     }
 
     @Test
     void validate_atTheMaximum_throws() {
         fill(16, RosterEntry.BENCH);
 
-        assertThrows(RosterFullException.class, () -> validator.validate(REQUEST));
+        assertThrows(RosterFullException.class, () -> validator.validate(USER, REQUEST));
     }
 
     @Test
@@ -53,14 +56,14 @@ class RosterNotFullValidatorTest {
         fill(15, RosterEntry.BENCH);
         fill(1, RosterEntry.IR);
 
-        assertDoesNotThrow(() -> validator.validate(REQUEST));
+        assertDoesNotThrow(() -> validator.validate(USER, REQUEST));
     }
 
     @Test
     void validate_usesTheLeaguesFormat() {
-        when(currentFormat.get()).thenReturn(byId(YAHOO_STANDARD).orElseThrow());
+        when(currentFormat.get(USER)).thenReturn(byId(YAHOO_STANDARD).orElseThrow());
         fill(15, RosterEntry.BENCH); // Yahoo Standard holds 15
 
-        assertThrows(RosterFullException.class, () -> validator.validate(REQUEST));
+        assertThrows(RosterFullException.class, () -> validator.validate(USER, REQUEST));
     }
 }

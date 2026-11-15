@@ -14,6 +14,9 @@ import static org.mockito.Mockito.*;
 
 class RosterFitsFormatValidatorTest {
 
+    // The signed-in user whose roster is being checked.
+    private static final String USER = "user-a";
+
     // The roster the mocked repository returns. Tests add to it.
     private final List<RosterEntry> roster = new ArrayList<>();
     private final RosterEntryRepository rosterEntryRepository = mock(RosterEntryRepository.class);
@@ -23,7 +26,7 @@ class RosterFitsFormatValidatorTest {
     private final RosterFormat yahoo = byId(YAHOO_STANDARD).orElseThrow();
 
     RosterFitsFormatValidatorTest() {
-        when(rosterEntryRepository.findAll()).thenReturn(roster);
+        when(rosterEntryRepository.findByProfileId(USER)).thenReturn(roster);
     }
 
     private void roster(int players, String slot) {
@@ -37,14 +40,14 @@ class RosterFitsFormatValidatorTest {
     void validate_rosterThatFits_passes() {
         roster(15, RosterEntry.BENCH);
 
-        assertDoesNotThrow(() -> validator.validate(yahoo));
+        assertDoesNotThrow(() -> validator.validate(USER, yahoo));
     }
 
     @Test
     void validate_rosterBiggerThanTheFormat_throws() {
         roster(16, RosterEntry.BENCH);
 
-        assertThrows(RosterTooBigForFormatException.class, () -> validator.validate(yahoo));
+        assertThrows(RosterTooBigForFormatException.class, () -> validator.validate(USER, yahoo));
     }
 
     @Test
@@ -52,6 +55,6 @@ class RosterFitsFormatValidatorTest {
         roster(15, RosterEntry.BENCH);
         roster(1, RosterEntry.IR);
 
-        assertThrows(RosterTooBigForFormatException.class, () -> validator.validate(yahoo));
+        assertThrows(RosterTooBigForFormatException.class, () -> validator.validate(USER, yahoo));
     }
 }

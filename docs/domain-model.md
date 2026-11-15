@@ -56,15 +56,19 @@ external-API-backed implementation.
 | Attribute | Type | Notes |
 |---|---|---|
 | id | Long | Assigned by the database |
+| profile | Profile | `@ManyToOne` link (column `profile_id`, a foreign key to `profiles`): whose roster this is. Always the signed-in user; not in the JSON |
 | player | Player | `@ManyToOne` link (column `player_id`, a foreign key to `players`); not in the JSON |
 | playerId | Long | The same `player_id` column, read-only; what the JSON shows and what a POST body sends. Validated to exist on create |
-| slot | String | A starting slot of the league's format (a `RosterSlot` name, e.g. `"RB"`), `BENCH` or `IR`. New players start on `BENCH` |
+| slot | String | A starting slot of the owner's format (a `RosterSlot` name, e.g. `"RB"`), `BENCH` or `IR`. New players start on `BENCH` |
 | note | String | Free text; editable after creation |
 
 Served at `/roster` (CRUD, plus `PUT /roster/{id}/slot` to move a player).
 Persisted through the `RosterEntryRepository` interface, implemented by
-`JpaRosterEntryRepository` (the `roster_entries` table). The league's format
-is in `roster_settings` (one row) and the formats themselves in the read-only
+`JpaRosterEntryRepository` (the `roster_entries` table). Every endpoint works
+on the signed-in user's roster only, found by their token's `sub`; another
+user's entry id gets the same 404 as one that doesn't exist. Each user's format
+is their `user_roster_settings` row (`RosterSettings`, a `@ManyToOne` to
+`Profile`, unique per profile; no row means ESPN Standard), and the formats themselves are in the read-only
 `roster_formats` / `roster_format_slots` tables, which `RosterDataLoader` fills
 from `StandardRosterFormats` at startup. The rules live
 in one validator class each: `RosterEntryValidator`s for adding (player
@@ -72,7 +76,8 @@ exists, fantasy-eligible position, not already rostered, roster not full),
 `SlotMoveValidator`s for moving (slot allows the position, slot has room, IR
 needs an Active injury, leaving IR needs a free spot), and
 `FormatChangeValidator`s for switching formats (the roster fits the new
-maximum). Switching formats moves every player to the bench. No `userId`
+maximum). Every rule counts only the signed-in user's roster and format.
+Switching formats moves every player on that user's roster to the bench. No `userId`
 field — this is a single global roster, not per-user (see **User**, below).
 
 ### WorkloadRatio (ACWR) — Derived
@@ -147,9 +152,9 @@ The personas and user stories throughout `docs/requirements.md` describe
 a fantasy manager with **their own roster** inside a **league** of other
 managers — but no `User`, `League`, or `Roster` class exists anywhere in
 the code. This is the biggest gap between the described domain and the
-current implementation: today's `RosterEntry` list is a single global roster
-with no owner, so there's no concept yet of one manager's roster vs.
-another's. Multi-league support is explicitly out of scope for
+current implementation. Since DEV-106 each `RosterEntry` and each format
+choice belongs to a `Profile` (the signed-in Supabase user), so every manager
+has their own roster, but there is still no `League` grouping managers. Multi-league support is explicitly out of scope for
 this semester's MVP, but even single-league, single-user support implies
 at least a `User` and a `Roster` (a User's chosen subset of Players)
 eventually need to exist.
@@ -159,7 +164,9 @@ eventually need to exist.
 | From | To | Multiplicity | Notes |
 |---|---|---|---|
 | Team | Player | 1 → * | By matching `Player.team` (string code) to `Team.code` — a soft/logical reference, not an enforced foreign key (no database yet) |
-| Player | RosterEntry | 1 → 0..1 | Via `RosterEntry.player` (`@ManyToOne`); a foreign key on `roster_entries.player_id`, so a rostered player can't be deleted. A player can be rostered once (checked by `NotAlreadyOnRosterValidator`) |
+| Player | RosterEntry | 1 → * | Via `RosterEntry.player` (`@ManyToOne`); a foreign key on `roster_entries.player_id`, so a rostered player can't be deleted. A player can be on each user's roster once (checked by `NotAlreadyOnRosterValidator`) |
+| Profile | RosterEntry | 1 → * | Via `RosterEntry.profile` (`@ManyToOne`, foreign key `roster_entries.profile_id`): a user's roster |
+| Profile | RosterSettings | 1 → 0..1 | Via `RosterSettings.profile` (`@ManyToOne`, unique `user_roster_settings.profile_id`): a user's format choice |
 | Division/Conference | Team | 1 → * | Static grouping only, defined in frontend data, not derivable from `Team` itself |
 | Player | WorkloadRatio | 1 → 1 (derived) | Computed per player per request from that player's two snap-count fields |
 | WorkloadRatio | RiskLevel | 1 → 1 (derived) | Pure function of the ratio value; no independent identity |

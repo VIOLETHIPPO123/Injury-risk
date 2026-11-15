@@ -14,6 +14,9 @@ import static org.mockito.Mockito.*;
 
 class LeavingIrNeedsRoomValidatorTest {
 
+    // The signed-in user whose roster is being checked.
+    private static final String USER = "user-a";
+
     // The roster the mocked repository returns. Tests add to it.
     private final List<RosterEntry> roster = new ArrayList<>();
     private final RosterEntryRepository rosterEntryRepository = mock(RosterEntryRepository.class);
@@ -24,9 +27,9 @@ class LeavingIrNeedsRoomValidatorTest {
     private final RosterEntry onIr = new RosterEntry(1L, 28L, RosterEntry.IR, "");
 
     LeavingIrNeedsRoomValidatorTest() {
-        when(rosterEntryRepository.findAll()).thenReturn(roster);
+        when(rosterEntryRepository.findByProfileId(USER)).thenReturn(roster);
         // ESPN Standard: 16 players plus 1 IR.
-        when(currentFormat.get()).thenReturn(byId(ESPN_STANDARD).orElseThrow());
+        when(currentFormat.get(USER)).thenReturn(byId(ESPN_STANDARD).orElseThrow());
         roster.add(onIr);
     }
 
@@ -40,15 +43,15 @@ class LeavingIrNeedsRoomValidatorTest {
     void validate_offIr_withRoomOnTheRoster_passes() {
         fillBench(15);
 
-        assertDoesNotThrow(() -> validator.validate(onIr, RosterEntry.BENCH));
+        assertDoesNotThrow(() -> validator.validate(USER, onIr, RosterEntry.BENCH));
     }
 
     @Test
     void validate_offIr_withAFullRoster_throws() {
         fillBench(16);
 
-        assertThrows(RosterFullException.class, () -> validator.validate(onIr, RosterEntry.BENCH));
-        assertThrows(RosterFullException.class, () -> validator.validate(onIr, "TE"));
+        assertThrows(RosterFullException.class, () -> validator.validate(USER, onIr, RosterEntry.BENCH));
+        assertThrows(RosterFullException.class, () -> validator.validate(USER, onIr, "TE"));
     }
 
     @Test
@@ -56,7 +59,7 @@ class LeavingIrNeedsRoomValidatorTest {
         fillBench(16);
         RosterEntry benched = roster.get(1);
 
-        assertDoesNotThrow(() -> validator.validate(benched, "WR"));
+        assertDoesNotThrow(() -> validator.validate(USER, benched, "WR"));
         verifyNoInteractions(currentFormat);
     }
 }

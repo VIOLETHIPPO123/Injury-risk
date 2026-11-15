@@ -17,8 +17,8 @@ public class RosterFitsFormatValidator implements FormatChangeValidator {
     }
 
     @Override
-    public void validate(RosterFormat format) {
-        int size = rosterEntryRepository.findAll().size();
+    public void validate(String userId, RosterFormat format) {
+        int size = rosterEntryRepository.findByProfileId(userId).size();
         if (size > format.maxRosterSize()) {
             throw new RosterTooBigForFormatException(format.name(), format.maxRosterSize(), size);
         }

@@ -19,7 +19,7 @@ public class PlayerExistsValidator implements RosterEntryValidator {
     }
 
     @Override
-    public void validate(RosterEntry request) {
+    public void validate(String userId, RosterEntry request) {
         // A body with no playerId is a missing player too (JPA won't look up a null id).
         if (request.getPlayerId() == null || !playerRepository.existsById(request.getPlayerId())) {
             throw new PlayerNotFoundException(request.getPlayerId());

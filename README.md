@@ -24,10 +24,18 @@ cp .env.example .env   # then fill in the values
 ./mvnw spring-boot:run
 ```
 
-On startup Hibernate creates or updates the `teams`, `players`, `roster_entries`, `roster_settings`,
-`roster_formats` and `roster_format_slots` tables. It loads the 32 teams and the three roster formats,
-adding only what's missing, so a restart never duplicates them. A format already in the table isn't
-updated from the code; to change one, edit or delete its row.
+On startup Hibernate creates or updates the `teams`, `players`, `profiles`, `roster_entries`,
+`user_roster_settings`, `roster_formats` and `roster_format_slots` tables. It loads the 32 teams and the
+three roster formats, adding only what's missing, so a restart never duplicates them. A format already in
+the table isn't updated from the code; to change one, edit or delete its row.
+
+Each signed-in user has their own roster (`roster_entries.profile_id`) and their own format choice (one
+`user_roster_settings` row, added the first time they pick a format; until then they're on ESPN Standard).
+
+**Upgrading a database from before DEV-106:** Hibernate can't add the new `profile_id NOT NULL` column to a
+`roster_entries` table that already has rows, because those rows have no owner. Before the first start on
+DEV-106, in the Supabase SQL editor run `delete from roster_entries;` (old test data only) and, since nothing
+uses it any more, `drop table roster_settings;`.
 The `players` table stays empty until the player sync job (DEV-102) runs; to test before then,
 add a few rows in the Supabase Table Editor.
 
