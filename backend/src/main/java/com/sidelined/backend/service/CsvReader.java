@@ -48,6 +48,12 @@ final class CsvReader {
             }
             return index < values.size() ? values.get(index) : "";
         }
+
+        // Like get, but "" if the file has no such column: for a column only some of
+        // nflverse's files have (older injury files have date_modified, newer ones don't).
+        String getIfPresent(String column) {
+            return columns.containsKey(column) ? get(column) : "";
+        }
     }
 
     private List<String> readRecord() throws IOException {

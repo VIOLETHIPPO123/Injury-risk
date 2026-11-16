@@ -4,7 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
-// Scheduling is what runs the nflverse jobs every week (WeeklyNflverseSync).
+// Scheduling is what runs the nflverse jobs: weekly (WeeklyNflverseSync) and daily (InjuryReportSyncJob).
 @SpringBootApplication
 @EnableScheduling
 public class BackendApplication {

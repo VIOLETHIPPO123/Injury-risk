@@ -62,6 +62,14 @@ class CsvReaderTest {
     }
 
     @Test
+    void getIfPresent_columnTheFileDoesntHave_isEmpty() throws IOException {
+        CsvReader.Row row = read("id,name\n1,Ann\n").next();
+
+        assertEquals("Ann", row.getIfPresent("name"));
+        assertEquals("", row.getIfPresent("date_modified"));
+    }
+
+    @Test
     void emptyFile_hasNoRows() throws IOException {
         assertNull(read("").next());
     }

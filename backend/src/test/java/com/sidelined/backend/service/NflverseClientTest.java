@@ -198,4 +198,103 @@ class NflverseClientTest {
 
         assertTrue(client.snapCounts().isEmpty());
     }
+
+    // ---------- Injury reports ----------
+
+    private static final String INJURIES_2024_URL = BASE + "/injuries/injuries_2024.csv";
+    private static final String INJURIES_2026_URL = BASE + "/injuries/injuries_2026.csv";
+    // The 2024 file's columns, which end in date_modified. Newer files drop it and add season_type.
+    private static final String INJURY_HEADER_2024 = "season,game_type,team,week,gsis_id,position,full_name,"
+        + "first_name,last_name,report_primary_injury,report_secondary_injury,report_status,"
+        + "practice_primary_injury,practice_secondary_injury,practice_status,date_modified\n";
+    private static final String INJURY_HEADER_2026 = "season,season_type,game_type,team,week,gsis_id,position,"
+        + "full_name,first_name,last_name,report_primary_injury,report_secondary_injury,report_status,"
+        + "practice_primary_injury,practice_secondary_injury,practice_status\n";
+
+    @Test
+    void injuryReports_readsTheGameReport_withItsModifiedTime() {
+        // Arrange
+        nflverse.expect(requestTo(INJURIES_2024_URL)).andRespond(withSuccess(INJURY_HEADER_2024
+            + "2024,REG,ARI,1,00-0039521,WR,Xavier Weaver,Xavier,Weaver,Oblique,Knee,Out,Oblique,,"
+            + "Did Not Participate In Practice,2024-09-06T19:05:30Z\n"
+            + "2024,SB,KC,22,00-0033873,QB,Patrick Mahomes,Patrick,Mahomes,Ankle,,Questionable,Ankle,,"
+            + "Limited Participation in Practice,2025-02-07T19:00:00Z\n", CSV));
+
+        // Act
+        List<NflverseInjuryReport> reports = client.injuryReports(2024).orElseThrow();
+
+        // Assert
+        nflverse.verify();
+        assertEquals(List.of(
+            new NflverseInjuryReport("00-0039521", 2024, 1, "Oblique", "Knee", "Out",
+                "Did Not Participate In Practice", "2024-09-06T19:05:30Z"),
+            new NflverseInjuryReport("00-0033873", 2024, 22, "Ankle", null, "Questionable",
+                "Limited Participation in Practice", "2025-02-07T19:00:00Z")), reports);
+    }
+
+    @Test
+    void injuryReports_playerOnlyOnThePracticeReport_getsThePracticeInjury_andNoGameStatus() {
+        // Arrange: the 2026 format, without date_modified.
+        nflverse.expect(requestTo(INJURIES_2026_URL)).andRespond(withSuccess(INJURY_HEADER_2026
+            + "2026,REG,REG,ARI,1,00-0034381,LB,Josh Sweat,Josh,Sweat,,,,Not injury related - resting,,"
+            + "Did Not Participate In Practice\n", CSV));
+
+        // Act
+        List<NflverseInjuryReport> reports = client.injuryReports(2026).orElseThrow();
+
+        // Assert
+        assertEquals(List.of(new NflverseInjuryReport("00-0034381", 2026, 1, "Not injury related - resting",
+            null, null, "Did Not Participate In Practice", null)), reports);
+    }
+
+    @Test
+    void injuryReports_whitespaceOnlyValues_areNull() {
+        // nflverse writes some empty practice statuses as a quoted line break and spaces.
+        nflverse.expect(requestTo(INJURIES_2024_URL)).andRespond(withSuccess(INJURY_HEADER_2024
+            + "2024,REG,HOU,15,00-0039359,TE,Cade Stover,Cade,Stover,Illness,,Out,,,\"\n    \","
+            + "2024-12-15T14:17:06Z\n", CSV));
+
+        NflverseInjuryReport report = client.injuryReports(2024).orElseThrow().get(0);
+
+        assertEquals("Out", report.gameStatus());
+        assertNull(report.practiceStatus());
+    }
+
+    @Test
+    void injuryReports_rowWhoseWeekIsntANumber_isLeftOut() {
+        nflverse.expect(requestTo(INJURIES_2026_URL)).andRespond(withSuccess(INJURY_HEADER_2026
+            + "2026,REG,REG,ARI,NA,00-0034381,LB,Josh Sweat,Josh,Sweat,Knee,,Out,Knee,,Full Participation in Practice\n"
+            + "2026,REG,REG,ARI,2,00-0034381,LB,Josh Sweat,Josh,Sweat,Knee,,Out,Knee,,Full Participation in Practice\n",
+            CSV));
+
+        List<NflverseInjuryReport> reports = client.injuryReports(2026).orElseThrow();
+
+        assertEquals(1, reports.size());
+        assertEquals(2, reports.get(0).week());
+    }
+
+    @Test
+    void injuryReports_noFileForTheSeasonYet_isEmpty() {
+        nflverse.expect(requestTo(INJURIES_2026_URL)).andRespond(withResourceNotFound());
+
+        assertTrue(client.injuryReports(2026).isEmpty());
+    }
+
+    @Test
+    void injuryReports_serverError_throws() {
+        nflverse.expect(requestTo(INJURIES_2026_URL)).andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+
+        assertThrows(NflverseUnavailableException.class, () -> client.injuryReports(2026));
+    }
+
+    @Test
+    void injuryReports_fileWithoutAColumnWeRead_throws() {
+        // nflverse renamed report_status.
+        nflverse.expect(requestTo(INJURIES_2026_URL)).andRespond(withSuccess(
+            INJURY_HEADER_2026.replace("report_status", "game_status")
+                + "2026,REG,REG,ARI,1,00-0034381,LB,Josh Sweat,Josh,Sweat,Knee,,Out,Knee,,Full Participation in Practice\n",
+            CSV));
+
+        assertThrows(NflverseUnavailableException.class, () -> client.injuryReports(2026));
+    }
 }

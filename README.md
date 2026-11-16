@@ -46,6 +46,12 @@ Right after it, `WorkloadSyncJob` loads the current season's snap counts from nf
 startup if its table is empty; that first load is about 12,000 rows, so allow it a minute or two. A player needs
 four games before they have an ACWR, on the player page and on the trend chart alike.
 
+`InjuryReportSyncJob` loads nflverse's weekly NFL injury reports for the current season and the two before it into
+`injury_reports` (one row per player per week: injury, game status, practice status). It runs every day at 2am
+Central, and at startup (after the players) if the table is empty; that first load is about 15,000 rows. Reports
+are matched to players on `gsis_id`. Reports for players not in `players` (mostly ones no longer on a depth chart)
+aren't stored; each run logs how many there were.
+
 Tests and GitHub Actions don't need any of this: `./mvnw test` uses an in-memory H2 database
 (the `test` profile in `backend/src/test/resources/application-test.properties`).
 
