@@ -1,23 +1,32 @@
 package com.sidelined.backend.controller;
 
 import com.sidelined.backend.repository.InMemoryInjuryRepository;
-import com.sidelined.backend.repository.InMemoryPlayerRepository;
+import com.sidelined.backend.repository.PlayerRepository;
 import com.sidelined.backend.service.InjuryService;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 // The JSON the front end reads: field names and newest-first order.
 class InjuryControllerTest {
 
+    private final PlayerRepository playerRepository = mock(PlayerRepository.class);
     private final MockMvc mvc = MockMvcBuilders
         .standaloneSetup(new InjuryController(new InjuryService(
-            new InMemoryInjuryRepository(), new InMemoryPlayerRepository())))
+            new InMemoryInjuryRepository(), playerRepository)))
         .setControllerAdvice(new ApiExceptionHandler())
         .build();
+
+    // The players the sample injuries belong to, and one (id 1) with none.
+    InjuryControllerTest() {
+        for (long id : new long[] {1L, 28L, 70L, 321L}) {
+            when(playerRepository.existsById(id)).thenReturn(true);
+        }
+    }
 
     @Test
     void knownPlayer_returnsInjuriesNewestFirst_withEveryField() throws Exception {

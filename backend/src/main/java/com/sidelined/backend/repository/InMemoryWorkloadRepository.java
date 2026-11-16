@@ -6,15 +6,14 @@ import com.sidelined.backend.model.WorkloadEntry;
 import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
-import java.util.stream.Collectors;
 
 // Hard-coded stand-in until the external API module. This game-by-game history is SAMPLE
 // DATA, generated from each player's stored snap counts so the two always agree: the last
 // game is snapsLastGame and the last four games add up to snapsLast4Games. That keeps the
 // newest weekly ACWR equal to the one on the player page. Older games come from a seeded
-// random generator, so every run produces the same history.
+// random generator, so every run produces the same history. It is generated when asked for,
+// not at startup, so players the sync job adds later have one too.
 @Repository
 public class InMemoryWorkloadRepository implements WorkloadRepository {
 
@@ -25,11 +24,10 @@ public class InMemoryWorkloadRepository implements WorkloadRepository {
     // Fixed so the generated history is the same every run.
     private static final long SEED = 2026;
 
-    private final Map<Long, List<WorkloadEntry>> byPlayerId;
+    private final PlayerRepository playerRepository;
 
     public InMemoryWorkloadRepository(PlayerRepository playerRepository) {
-        this.byPlayerId = playerRepository.findAll().stream()
-            .collect(Collectors.toMap(Player::getId, InMemoryWorkloadRepository::generate));
+        this.playerRepository = playerRepository;
     }
 
     // Sample bye weeks: weeks 5 to 14, spread across the teams in enum order.
@@ -39,7 +37,9 @@ public class InMemoryWorkloadRepository implements WorkloadRepository {
 
     @Override
     public List<WorkloadEntry> findByPlayerId(Long playerId) {
-        return byPlayerId.getOrDefault(playerId, List.of());
+        return playerRepository.findById(playerId)
+            .map(InMemoryWorkloadRepository::generate)
+            .orElse(List.of());
     }
 
     // Weeks 1 to CURRENT_WEEK, skipping the team's bye.
