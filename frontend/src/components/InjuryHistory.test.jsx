@@ -21,11 +21,17 @@ function tableRows() {
     .map((row) => within(row).getAllByRole("cell").map((cell) => cell.textContent));
 }
 
-test("is labeled as sample data", () => {
+test("isn't labeled Sample data: the injuries come from the real injury reports", () => {
   render(<InjuryHistory injuries={[]} />);
 
   const section = screen.getByRole("region", { name: "Injury history" });
-  expect(within(section).getByText("Sample data")).toBeInTheDocument();
+  expect(within(section).queryByText("Sample data")).not.toBeInTheDocument();
+});
+
+test("an injury without a type shows a dash", () => {
+  render(<InjuryHistory injuries={[injury(2026, 9, "Knee", null, 1, "Active")]} />);
+
+  expect(tableRows()).toEqual([["2026", "9", "Knee", "—", "1", "Active"]]);
 });
 
 test("a player with no injuries shows No recorded injuries", () => {

@@ -8,7 +8,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-// Which injuries count as Active is tested in InMemoryInjuryRepositoryTest.
+// Which injuries count as Active is tested in InjuryHistoryTest; InjuryHistoryPersistenceTest
+// runs this validator against real injury reports.
 class InjuredReserveValidatorTest {
 
     // The signed-in user whose roster is being checked.

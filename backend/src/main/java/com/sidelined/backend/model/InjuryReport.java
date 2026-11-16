@@ -6,6 +6,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.SequenceGenerator;
@@ -14,12 +15,14 @@ import jakarta.persistence.UniqueConstraint;
 import java.util.Objects;
 
 // One player's line on one week's official NFL injury report, as nflverse publishes it: the raw
-// data the injury history and risk will be worked out from. InjuryReportSyncJob fills the table;
+// data the injury history (InjuryHistory) is worked out from. InjuryReportSyncJob fills the table;
 // the API never writes to it. A player has at most one row per week (the unique constraint).
 @Entity
+// The unique constraint also serves lookups by player; the index finds the current week.
 @Table(name = "injury_reports",
     uniqueConstraints = @UniqueConstraint(
-        name = "injury_reports_player_season_week", columnNames = {"player_id", "season", "week"}))
+        name = "injury_reports_player_season_week", columnNames = {"player_id", "season", "week"}),
+    indexes = @Index(name = "injury_reports_season_week", columnList = "season, week"))
 public class InjuryReport {
 
     // Values longer than this are cut, so one odd row can't make the whole save fail.

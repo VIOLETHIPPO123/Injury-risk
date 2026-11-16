@@ -3,7 +3,8 @@ import "./InjuryHistory.css";
 
 // A player's past injuries, in the order given (the API sends them newest first), with a
 // summary line above that warns about any body part injured more than once.
-// `injuries` is null while loading; `error` is a message when the request failed.
+// `injuries` is null while loading; `error` is a message when the request failed. The injuries
+// come from the NFL's weekly injury reports, which give no type ("Strain"), so it shows as "—".
 function InjuryHistory({ injuries, error }) {
   const repeats = injuries ? repeatedInjuries(injuries) : [];
 
@@ -43,7 +44,7 @@ function InjuryHistory({ injuries, error }) {
                 <td>{injury.season}</td>
                 <td>{injury.week}</td>
                 <td>{injury.bodyPart}</td>
-                <td>{injury.type}</td>
+                <td>{injury.type ?? "—"}</td>
                 <td>{injury.gamesMissed}</td>
                 <td>{injury.status}</td>
               </tr>
@@ -58,7 +59,6 @@ function InjuryHistory({ injuries, error }) {
     <section className="injury-history" aria-labelledby="injury-history-title">
       <div className="injury-history-header">
         <h2 id="injury-history-title">Injury history</h2>
-        <span className="injury-history-sample">Sample data</span>
       </div>
       {body}
     </section>

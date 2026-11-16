@@ -133,22 +133,30 @@ file (`PfrIdMap`), and then sets each player's `snapsLastGame` and
 
 | Attribute | Type | Notes |
 |---|---|---|
-| id | Long | Unique per injury |
+| id | Long | The id of the injury's first `InjuryReport` row |
 | playerId | Long | References `Player.id` |
 | season | int | e.g. 2026 |
-| week | int | 1–18 |
-| bodyPart | String | e.g. `"Hamstring"` |
-| type | String | e.g. `"Strain"` |
-| gamesMissed | int | 0 or more |
+| week | int | The injury's first week: 1–18, or 19–22 in the playoffs |
+| bodyPart | String | The report's primary injury, e.g. `"Hamstring"` |
+| type | String | Always `null`: the injury reports don't give one. Kept in the JSON |
+| gamesMissed | int | Weeks of the injury the player was listed Out |
 | status | InjuryStatus | `Active`, `Recovering` or `Recovered` (JSON uses those labels) |
 
-Read through the read-only `InjuryRepository` interface, keyed by `id`, which
-also looks up a player's injuries (`findByPlayerId`) and answers "does this
-player have an Active injury?" (`hasActiveInjury`, which the IR rule uses).
-Today's implementation, `InMemoryInjuryRepository`, is made-up sample data
-for real players. Served by `InjuryService` at `GET /players/{id}/injuries`,
-newest first; an unknown player is a 404, a player with no injuries an empty
-list. Planned: an external-API-backed implementation.
+**Derived**, not stored: `InjuryHistory` groups a player's `InjuryReport` rows
+into injuries. Rows for the same body part in back-to-back weeks are one
+injury; one missing week (a bye) doesn't end it, while a gap of two or more
+weeks, a new season or a different body part starts a new one. Rows that
+aren't an injury ("Not injury related - …", or no injury given) are left out.
+Status comes from the current week's report (the latest week in
+`injury_reports`): Active if the injury is on it as Out or Doubtful,
+Recovering if on it with any other status, Recovered if not on it.
+
+Read through the read-only `InjuryRepository` interface: a player's injuries
+(`findByPlayerId`) and "does this player have an Active injury?"
+(`hasActiveInjury`, which the IR rule uses). The implementation,
+`ReportedInjuryRepository`, works them out from `injury_reports` on each
+request. Served by `InjuryService` at `GET /players/{id}/injuries`, newest
+first; an unknown player is a 404, a player with no injuries an empty list.
 
 ### InjuryReport — Implemented
 
@@ -167,7 +175,7 @@ list. Planned: an external-API-backed implementation.
 
 The raw weekly injury reports, unique per (`player_id`, `season`, `week`).
 Filled daily by `InjuryReportSyncJob` from nflverse, matched to players on
-`gsis_id`; not exposed by the API. Not yet connected to `Injury` above.
+`gsis_id`; not exposed by the API. `Injury` above is worked out from these rows.
 
 ### RiskScore — Planned (as a first-class, persisted concept)
 
@@ -204,7 +212,7 @@ eventually need to exist.
 | Player | WorkloadRatio | 1 → 1 (derived) | Computed per player per request from that player's two snap-count fields |
 | WorkloadRatio | RiskLevel | 1 → 1 (derived) | Pure function of the ratio value; no independent identity |
 | Player | WorkloadEntry | 1 → * | Via `WorkloadEntry.player` (`@ManyToOne`, foreign key `workload_entries.player_id`): one entry per game played |
-| Player | Injury | 1 → * | Via `Injury.playerId`; a player can have many injuries over time |
+| Player | Injury | 1 → * (derived) | Via `Injury.playerId`; worked out from the player's `InjuryReport` rows |
 | Player | InjuryReport | 1 → * | Via `InjuryReport.player` (`@ManyToOne`, foreign key `injury_reports.player_id`): at most one per week |
 | *(planned)* Player | RiskScore | 1 → * | If persisted, a player would accumulate a history of scores over time (one per computation), not just one current value |
 | *(planned)* User | Roster | 1 → * or 1 → 1 | Depends on whether multi-roster-per-user is ever needed; MVP likely only needs 1 → 1 |
