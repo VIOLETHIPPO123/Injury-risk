@@ -36,8 +36,11 @@ Each signed-in user has their own roster (`roster_entries.profile_id`) and their
 `roster_entries` table that already has rows, because those rows have no owner. Before the first start on
 DEV-106, in the Supabase SQL editor run `delete from roster_entries;` (old test data only) and, since nothing
 uses it any more, `drop table roster_settings;`.
-The `players` table stays empty until the player sync job (DEV-102) runs; to test before then,
-add a few rows in the Supabase Table Editor.
+The `players` table is filled from [nflverse](https://github.com/nflverse/nflverse-data) by `PlayerSyncJob`:
+everyone on a team's current depth chart, plus one `DEF` row per team. It runs every Tuesday at 2pm Central,
+and at startup if the table is empty (the first start takes a few seconds longer and needs internet access).
+Players are matched on `gsis_id`, so a run updates rows in place and never changes an id. Snap counts aren't
+in those nflverse files, so new players start at 0.
 
 Tests and GitHub Actions don't need any of this: `./mvnw test` uses an in-memory H2 database
 (the `test` profile in `backend/src/test/resources/application-test.properties`).

@@ -1,24 +1,37 @@
 package com.sidelined.backend.controller;
 
-import com.sidelined.backend.repository.InMemoryPlayerRepository;
+import com.sidelined.backend.model.NflTeam;
+import com.sidelined.backend.model.Player;
+import com.sidelined.backend.model.Position;
+import com.sidelined.backend.model.Workload;
 import com.sidelined.backend.repository.InMemoryWorkloadRepository;
+import com.sidelined.backend.repository.PlayerRepository;
 import com.sidelined.backend.service.WorkloadService;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import java.util.Optional;
 
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 // The JSON the front end reads: one entry per game in week order, no entry for a bye.
 class WorkloadControllerTest {
 
-    private final InMemoryPlayerRepository playerRepository = new InMemoryPlayerRepository();
+    private final PlayerRepository playerRepository = mock(PlayerRepository.class);
     private final MockMvc mvc = MockMvcBuilders
         .standaloneSetup(new WorkloadController(new WorkloadService(
             new InMemoryWorkloadRepository(playerRepository), playerRepository)))
         .setControllerAdvice(new ApiExceptionHandler())
         .build();
+
+    // The one stored player: Jacoby Brissett (id 1).
+    WorkloadControllerTest() {
+        when(playerRepository.existsById(1L)).thenReturn(true);
+        when(playerRepository.findById(1L)).thenReturn(Optional.of(
+            new Player(1L, "Jacoby Brissett", NflTeam.ARI, Position.QB, new Workload(68, 253))));
+    }
 
     @Test
     void knownPlayer_returnsGamesInWeekOrder_withNoEntryForTheBye() throws Exception {

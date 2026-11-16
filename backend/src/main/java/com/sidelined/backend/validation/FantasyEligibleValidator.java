@@ -7,7 +7,7 @@ import com.sidelined.backend.repository.PlayerRepository;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
-// Rule: only QBs, RBs (fullbacks included), WRs, TEs and kickers can be rostered.
+// Rule: only QBs, RBs (fullbacks included), WRs, TEs, kickers and team defenses can be rostered.
 // Linemen, individual defenders, punters, holders, snappers and return men can't.
 @Component
 @Order(2)

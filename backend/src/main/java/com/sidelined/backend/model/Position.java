@@ -27,7 +27,10 @@ public enum Position {
     H(Group.SPECIAL_TEAMS),
     PR(Group.SPECIAL_TEAMS),
     KR(Group.SPECIAL_TEAMS),
-    LS(Group.SPECIAL_TEAMS);
+    LS(Group.SPECIAL_TEAMS),
+
+    // A whole team's defense, stored as one player so a fantasy roster can hold it.
+    DEF(Group.DEFENSE);
 
     public enum Group {
         OFFENSE,

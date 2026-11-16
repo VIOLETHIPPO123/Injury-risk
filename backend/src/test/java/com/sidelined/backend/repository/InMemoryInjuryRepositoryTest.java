@@ -63,15 +63,6 @@ class InMemoryInjuryRepositoryTest {
     }
 
     @Test
-    void everyInjury_belongsToARealPlayer() {
-        InMemoryPlayerRepository players = new InMemoryPlayerRepository();
-
-        for (Injury injury : injuryRepository.findAll()) {
-            assertTrue(players.existsById(injury.playerId()), "No player for " + injury);
-        }
-    }
-
-    @Test
     void everyInjuryHasSaneValues() {
         for (Injury injury : injuryRepository.findAll()) {
             assertNotNull(injury.id(), "Missing id: " + injury);

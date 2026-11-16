@@ -29,11 +29,12 @@ Each class is tagged:
 | snapsLastGame | int | Most recent game's snap count |
 | snapsLast4Games | int | Total snaps over the last 4 games (used as the "chronic" workload) |
 
-Read through the read-only `PlayerRepository` interface. Today's
-implementation, `InMemoryPlayerRepository`, is a hardcoded list served by
-`PlayerService` (`GET /players`), explicitly commented as illustrative
-placeholder data, not real game data. Planned: an external-API-backed
-implementation.
+Read through the read-only `PlayerRepository` interface and served by
+`PlayerService` (`GET /players`). The implementation, `JpaPlayerRepository`,
+is the `players` table, which `PlayerSyncJob` fills from nflverse every week:
+the players on each team's current depth chart, matched on `gsis_id` (stored,
+not in the JSON), plus one team defense per team with position `DEF`. Snap
+counts are not synced yet, so synced players have 0.
 
 ### Team — Implemented
 

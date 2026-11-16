@@ -105,6 +105,23 @@ class SecurityTest {
     }
 
     @Test
+    void players_cantBeAddedChangedOrDeletedThroughTheApi_evenWithAToken() throws Exception {
+        // Players only come from the nflverse sync job.
+        Long playerId = playerRepository.save(
+            new Player(null, "Read Only", NflTeam.ARI, Position.QB, new Workload(10, 40))).getId();
+        String body = "{\"name\":\"Made Up\",\"team\":\"ARI\",\"position\":\"QB\"}";
+
+        mvc.perform(post("/players").with(tokenFor(newUserId())).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isMethodNotAllowed());
+        mvc.perform(put("/players/" + playerId).with(tokenFor(newUserId())).contentType(MediaType.APPLICATION_JSON).content(body))
+            .andExpect(status().isNotFound());
+        mvc.perform(delete("/players/" + playerId).with(tokenFor(newUserId())))
+            .andExpect(status().isNotFound());
+
+        assertEquals("Read Only", playerRepository.findById(playerId).orElseThrow().getName());
+    }
+
+    @Test
     void publicGet_errorKeepsItsStatus_insteadOf401() throws Exception {
         // An unknown player is still a 404 for a visitor with no token.
         mvc.perform(get("/players/999999/injuries")).andExpect(status().isNotFound());

@@ -18,6 +18,11 @@ class RosterPositionTest {
     }
 
     @Test
+    void of_teamDefense_isADef() {
+        assertEquals(Optional.of(RosterPosition.DEF), RosterPosition.of(Position.DEF));
+    }
+
+    @Test
     void skillPositions_mapToThemselves() {
         assertEquals(Optional.of(RosterPosition.QB), RosterPosition.of(Position.QB));
         assertEquals(Optional.of(RosterPosition.RB), RosterPosition.of(Position.RB));

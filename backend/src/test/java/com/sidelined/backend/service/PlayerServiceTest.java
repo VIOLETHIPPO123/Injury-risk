@@ -11,8 +11,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
-// The data itself is tested in InMemoryPlayerRepositoryTest. Here we only check that the service
-// serves whatever its repository holds, without depending on where the data comes from.
+// The service serves whatever its repository holds, wherever that data comes from.
 class PlayerServiceTest {
 
     private final PlayerRepository playerRepository = mock(PlayerRepository.class);

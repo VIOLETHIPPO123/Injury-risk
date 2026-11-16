@@ -23,7 +23,7 @@ public class Player {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // nflverse's player id; the sync job (DEV-102) matches on it. Optional because team
+    // nflverse's player id; the sync job (PlayerSyncJob) matches on it. Optional because team
     // defenses are stored as players and have none. Postgres allows many NULLs in a unique column.
     @Column(name = "gsis_id", unique = true)
     private String gsisId;
@@ -37,7 +37,7 @@ public class Player {
 
     // Stored as plain text ("QB") instead of @Enumerated: Hibernate adds a database check listing
     // today's positions for any enum field, and ddl-auto=update never widens it, so a new
-    // position (DEF in DEV-102) would be rejected. In Java it is still a Position.
+    // position (as DEF once was) would be rejected. In Java it is still a Position.
     @Column(nullable = false, length = 8)
     private String position;
 
@@ -59,6 +59,23 @@ public class Player {
         this.team = team;
         this.position = position.name();
         this.workload = workload;
+    }
+
+    // A team's defense as a player: no nflverse id, and no snaps of its own.
+    public static Player teamDefense(NflTeam team) {
+        return new Player(null, null, team.getDisplayName() + " D/ST", team, Position.DEF, new Workload(0, 0));
+    }
+
+    // What the sync job may change about a player it already has. The id, the nflverse id and
+    // the snap counts stay as they are. Returns whether anything changed.
+    public boolean updateFromNflverse(String name, NflTeam team, Position position) {
+        if (this.name.equals(name) && this.team == team && this.position.equals(position.name())) {
+            return false;
+        }
+        this.name = name;
+        this.team = team;
+        this.position = position.name();
+        return true;
     }
 
     public Long getId()           { return id; }
