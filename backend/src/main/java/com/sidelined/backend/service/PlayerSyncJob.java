@@ -48,7 +48,7 @@ public class PlayerSyncJob {
     }
 
     // Run every Tuesday (WeeklyNflverseSync), at startup when the table is empty
-    // (NflverseDataLoader), and by admins on demand. One run at a time, so two can't both add the same new player. Throws
+    // (NflverseDataLoader), and by admins on demand (AdminController). One run at a time, so two can't both add the same new player. Throws
     // NflverseUnavailableException, changing nothing, if a download fails.
     public synchronized Result sync() {
         Map<String, NflversePlayer> known = nflverse.players().stream()

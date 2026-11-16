@@ -78,8 +78,8 @@ public class InjuryReportSyncJob {
         }
     }
 
-    // Also run at startup when the table is empty (NflverseDataLoader), and by admins on
-    // demand. One run at a time, so two can't both add the same report. Every season is
+    // Also run at startup when the table is empty (NflverseDataLoader). Not part of the admin
+    // refresh (AdminController), which runs the weekly jobs. One run at a time, so two can't both add the same report. Every season is
     // downloaded before anything is saved, so a failed download (NflverseUnavailableException)
     // changes nothing.
     public synchronized Result sync() {

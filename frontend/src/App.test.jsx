@@ -863,6 +863,97 @@ describe("signing in and the My Roster guard", () => {
     expect(await screen.findByText("Admin")).toBeInTheDocument();
   });
 
+  // ---------- Admin: Refresh player data ----------
+
+  // The fake backend, with /me answering `role` and the refresh endpoint answering `refresh()`.
+  function backendWith(role, refresh) {
+    const realFetch = fetch.getMockImplementation();
+    fetch.mockImplementation((url, options) => {
+      if (url.endsWith("/me")) return jsonResponse(200, { role });
+      if (url.endsWith("/admin/players/refresh")) return refresh(options);
+      return realFetch(url, options);
+    });
+  }
+
+  const refreshCalls = () => fetch.mock.calls.filter(([url]) => url.endsWith("/admin/players/refresh"));
+
+  test("a non-admin never sees the Refresh player data button", async () => {
+    backendWith("USER", () => jsonResponse(403, { error: "Admins only" }));
+
+    await renderHome(PLAYERS);
+
+    // Sign out only appears once signed in, and /me has answered by the time the roster shows.
+    expect(await screen.findByRole("button", { name: "Sign out" })).toBeInTheDocument();
+    await waitFor(() => expect(fetch.mock.calls.some(([url]) => url.endsWith("/me"))).toBe(true));
+    expect(screen.queryByRole("button", { name: "Refresh player data" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Admin")).not.toBeInTheDocument();
+  });
+
+  test("a signed-out visitor never sees the Refresh player data button", async () => {
+    localStorage.clear();
+
+    await renderHome(PLAYERS);
+
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Refresh player data" })).not.toBeInTheDocument();
+  });
+
+  test("an admin's Refresh player data runs the refresh, reloads the players and says what changed", async () => {
+    backendWith("ADMIN", () =>
+      jsonResponse(200, {
+        players: { added: 3, updated: 12, skipped: 1, defensesAdded: 0 },
+        workloads: { added: 1400, updated: 2, unmatched: 60 },
+      }),
+    );
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+    const playerLoadsBefore = getPlayers.mock.calls.length;
+
+    await user.click(await screen.findByRole("button", { name: "Refresh player data" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Player data refreshed: 3 new and 12 updated players, 1400 new and 2 corrected games.",
+    );
+    expect(refreshCalls()).toHaveLength(1);
+    expect(refreshCalls()[0][1]).toEqual({
+      method: "POST",
+      headers: { Authorization: "Bearer test-token" },
+    });
+    expect(getPlayers.mock.calls.length).toBe(playerLoadsBefore + 1);
+    expect(screen.getByRole("button", { name: "Refresh player data" })).toBeEnabled();
+  });
+
+  test("while a refresh runs the button is disabled, so it can't be started twice", async () => {
+    let finish;
+    backendWith("ADMIN", () => new Promise((resolve) => { finish = resolve; }));
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+
+    await user.click(await screen.findByRole("button", { name: "Refresh player data" }));
+
+    const busy = await screen.findByRole("button", { name: "Refreshing player data…" });
+    expect(busy).toBeDisabled();
+    await user.click(busy);
+    expect(refreshCalls()).toHaveLength(1);
+
+    finish(await jsonResponse(200, {
+      players: { added: 0, updated: 0, skipped: 0, defensesAdded: 0 },
+      workloads: { added: 0, updated: 0, unmatched: 0 },
+    }));
+    expect(await screen.findByRole("button", { name: "Refresh player data" })).toBeEnabled();
+  });
+
+  test("a refresh the backend turns down shows its reason", async () => {
+    backendWith("ADMIN", () => jsonResponse(502, { error: "Couldn't download players" }));
+    const user = userEvent.setup();
+    await renderHome(PLAYERS);
+
+    await user.click(await screen.findByRole("button", { name: "Refresh player data" }));
+
+    expect(await screen.findByText("Refresh failed: Couldn't download players")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Refresh player data" })).toBeEnabled();
+  });
+
   test("the Sign in button comes back to where the user was", async () => {
     localStorage.clear();
     const user = userEvent.setup();

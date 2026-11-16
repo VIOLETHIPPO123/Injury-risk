@@ -15,6 +15,7 @@ import SignUpPage from "./pages/SignUpPage";
 import { getPlayers } from "./services/playerService";
 import { setSignedOutHandler, SignedOutError } from "./services/apiFetch";
 import { getMyRole } from "./services/authService";
+import { refreshPlayerData } from "./services/adminService";
 import { clearSession, loadSession } from "./services/session";
 import { startGoogleSignIn } from "./services/oauthRedirect";
 import {
@@ -77,6 +78,10 @@ function App({ oauthResult = null }) {
   const [signedIn, setSignedIn] = useState(() => loadSession() !== null);
   // From GET /me once signed in: "USER" or "ADMIN".
   const [role, setRole] = useState(null);
+  // The admin's "Refresh player data": whether it's running, and how the last one went
+  // ({ ok, text }).
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshResult, setRefreshResult] = useState(null);
   // Where to go after signing in from the Sign in button or an expired session.
   const [returnTo, setReturnTo] = useState(null);
   // Why the sign-in page is showing, e.g. the session expired.
@@ -203,10 +208,35 @@ function App({ oauthResult = null }) {
     if (PROTECTED_VIEWS.has(view)) setView("home");
   }
 
+  // Admin only: the backend reloads players and snap counts from nflverse, then the app loads
+  // the players again so the new numbers show without a page reload. The button is only drawn
+  // for an admin, but that is a convenience: the backend checks the role on every call.
+  async function handleRefreshPlayerData() {
+    setRefreshing(true);
+    setRefreshResult(null);
+    try {
+      const { players: synced, workloads } = await refreshPlayerData();
+      setPlayers(await getPlayers());
+      setRefreshResult({
+        ok: true,
+        text: `Player data refreshed: ${synced.added} new and ${synced.updated} updated players, `
+          + `${workloads.added} new and ${workloads.updated} corrected games.`,
+      });
+    } catch (err) {
+      // An expired session has already sent the user to sign-in.
+      if (!(err instanceof SignedOutError)) {
+        setRefreshResult({ ok: false, text: `Refresh failed: ${err.message}` });
+      }
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   // Drops everything that belonged to the signed-in user, so the next user starts clean.
   function forgetSignedInUser() {
     setSignedIn(false);
     setRole(null);
+    setRefreshResult(null);
     setRoster([]);
     setRosterFormat(DEFAULT_FORMAT);
     setRosterError(null);
@@ -450,7 +480,14 @@ function App({ oauthResult = null }) {
       <div className="account-bar">
         {signedIn ? (
           <>
-            {role === "ADMIN" && <span className="account-role">Admin</span>}
+            {role === "ADMIN" && (
+              <>
+                <button type="button" onClick={handleRefreshPlayerData} disabled={refreshing}>
+                  {refreshing ? "Refreshing player data…" : "Refresh player data"}
+                </button>
+                <span className="account-role">Admin</span>
+              </>
+            )}
             <button type="button" onClick={handleSignOut}>
               Sign out
             </button>
@@ -463,6 +500,14 @@ function App({ oauthResult = null }) {
           )
         )}
       </div>
+      {refreshResult && (
+        <p
+          className={refreshResult.ok ? "refresh-result" : "roster-error"}
+          role={refreshResult.ok ? "status" : "alert"}
+        >
+          {refreshResult.text}
+        </p>
+      )}
       {rosterError && (
         <p className="roster-error" role="alert">
           Roster error: {rosterError}
