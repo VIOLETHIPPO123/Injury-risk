@@ -20,7 +20,7 @@ public class FantasyEligibleValidator implements RosterEntryValidator {
     }
 
     @Override
-    public void validate(RosterEntry request) {
+    public void validate(String userId, RosterEntry request) {
         playerRepository.findById(request.getPlayerId()).ifPresent(player -> {
             if (RosterPosition.of(player.getPosition()).isEmpty()) {
                 throw new NotFantasyEligibleException();

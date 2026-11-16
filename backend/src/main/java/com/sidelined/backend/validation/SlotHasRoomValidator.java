@@ -26,17 +26,17 @@ public class SlotHasRoomValidator implements SlotMoveValidator {
     }
 
     @Override
-    public void validate(RosterEntry entry, String slot) {
+    public void validate(String userId, RosterEntry entry, String slot) {
         if (RosterEntry.BENCH.equals(slot)) {
             return;
         }
-        RosterFormat format = currentFormat.get();
+        RosterFormat format = currentFormat.get(userId);
         // SlotAllowsPositionValidator has already turned away slots the format doesn't have.
         int room = RosterEntry.IR.equals(slot)
             ? format.irCount()
             : format.findSlot(slot).map(RosterSlot::count).orElse(0);
 
-        long taken = rosterEntryRepository.findAll().stream()
+        long taken = rosterEntryRepository.findByProfileId(userId).stream()
             .filter(e -> slot.equals(e.getSlot()) && !e.getId().equals(entry.getId()))
             .count();
         if (taken >= room) {

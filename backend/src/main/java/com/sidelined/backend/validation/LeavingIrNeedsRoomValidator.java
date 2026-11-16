@@ -24,12 +24,12 @@ public class LeavingIrNeedsRoomValidator implements SlotMoveValidator {
     }
 
     @Override
-    public void validate(RosterEntry entry, String slot) {
+    public void validate(String userId, RosterEntry entry, String slot) {
         if (!RosterEntry.IR.equals(entry.getSlot()) || RosterEntry.IR.equals(slot)) {
             return;
         }
-        RosterFormat format = currentFormat.get();
-        long counted = rosterEntryRepository.findAll().stream()
+        RosterFormat format = currentFormat.get(userId);
+        long counted = rosterEntryRepository.findByProfileId(userId).stream()
             .filter(e -> !RosterEntry.IR.equals(e.getSlot()))
             .count();
         if (counted >= format.maxRosterSize()) {

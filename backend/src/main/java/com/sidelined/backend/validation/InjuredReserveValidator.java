@@ -18,7 +18,7 @@ public class InjuredReserveValidator implements SlotMoveValidator {
     }
 
     @Override
-    public void validate(RosterEntry entry, String slot) {
+    public void validate(String userId, RosterEntry entry, String slot) {
         if (RosterEntry.IR.equals(slot) && !injuryRepository.hasActiveInjury(entry.getPlayerId())) {
             throw new NoActiveInjuryException(entry.getPlayerId());
         }

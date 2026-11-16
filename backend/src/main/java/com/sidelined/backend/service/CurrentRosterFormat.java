@@ -6,7 +6,7 @@ import com.sidelined.backend.repository.RosterFormatRepository;
 import com.sidelined.backend.repository.RosterSettingsRepository;
 import org.springframework.stereotype.Component;
 
-// The format the league is on now. The roster rules all check against it.
+// The format a user's roster is on now. The roster rules all check against it.
 @Component
 public class CurrentRosterFormat {
 
@@ -19,8 +19,8 @@ public class CurrentRosterFormat {
         this.settingsRepository = settingsRepository;
     }
 
-    public RosterFormat get() {
-        String formatId = settingsRepository.get().formatId();
+    public RosterFormat get(String userId) {
+        String formatId = settingsRepository.getFor(userId).formatId();
         return formatRepository.findById(formatId)
             .orElseThrow(() -> new UnknownRosterFormatException(formatId));
     }
