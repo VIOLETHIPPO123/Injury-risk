@@ -66,8 +66,8 @@ public class Player {
         return new Player(null, null, team.getDisplayName() + " D/ST", team, Position.DEF, new Workload(0, 0));
     }
 
-    // What the sync job may change about a player it already has. The id, the nflverse id and
-    // the snap counts stay as they are. Returns whether anything changed.
+    // What the player sync job may change about a player it already has. The id, the nflverse
+    // id and the snap counts stay as they are. Returns whether anything changed.
     public boolean updateFromNflverse(String name, NflTeam team, Position position) {
         if (this.name.equals(name) && this.team == team && this.position.equals(position.name())) {
             return false;
@@ -75,6 +75,15 @@ public class Player {
         this.name = name;
         this.team = team;
         this.position = position.name();
+        return true;
+    }
+
+    // Set by the workload sync job after each run. Returns whether anything changed.
+    public boolean updateWorkload(Workload workload) {
+        if (workload.equals(this.workload)) {
+            return false;
+        }
+        this.workload = workload;
         return true;
     }
 

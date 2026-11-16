@@ -27,15 +27,6 @@
   }
 }
 
-/* Makes clear the workload history isn't real yet. Matches the injury history's label. */
-.acwr-trend-sample {
-  padding: 2px 8px;
-  border: 1px dashed currentColor;
-  border-radius: 999px;
-  font-size: 12px;
-  color: var(--text);
-}
-
 .acwr-trend-message,
 .acwr-trend-summary {
   margin: 12px 0 0;

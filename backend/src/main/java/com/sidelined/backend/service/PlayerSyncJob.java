@@ -8,7 +8,6 @@ import com.sidelined.backend.model.Workload;
 import com.sidelined.backend.repository.JpaPlayerRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -48,19 +47,8 @@ public class PlayerSyncJob {
         this.playerRepository = playerRepository;
     }
 
-    // Tuesday 2pm Central: Monday Night Football's data is published by then. A failure is
-    // logged and the table left as it was; next week's run (or an admin's) tries again.
-    @Scheduled(cron = "0 0 14 * * TUE", zone = "America/Chicago")
-    public void runWeekly() {
-        try {
-            sync();
-        } catch (RuntimeException e) {
-            log.error("Weekly player sync failed", e);
-        }
-    }
-
-    // Also run at startup when the table is empty (PlayerDataLoader), and by admins on demand.
-    // One run at a time, so two can't both add the same new player. Throws
+    // Run every Tuesday (WeeklyNflverseSync), at startup when the table is empty
+    // (NflverseDataLoader), and by admins on demand. One run at a time, so two can't both add the same new player. Throws
     // NflverseUnavailableException, changing nothing, if a download fails.
     public synchronized Result sync() {
         Map<String, NflversePlayer> known = nflverse.players().stream()

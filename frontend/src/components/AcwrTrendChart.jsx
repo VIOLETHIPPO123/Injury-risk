@@ -199,7 +199,6 @@ function AcwrTrendChart({ games, error }) {
     <section className="acwr-trend" aria-labelledby="acwr-trend-title">
       <div className="acwr-trend-header">
         <h2 id="acwr-trend-title">ACWR trend</h2>
-        <span className="acwr-trend-sample">Sample data</span>
       </div>
       {body}
     </section>

@@ -117,10 +117,10 @@ describe("AcwrTrendChart", () => {
     expect(screen.getByText("No trend data yet.")).toBeInTheDocument();
   });
 
-  it("is labeled Sample data", () => {
+  it("isn't labeled Sample data: the snap counts are real", () => {
     render(<AcwrTrendChart games={SEASON} />);
 
-    expect(screen.getByText("Sample data")).toBeInTheDocument();
+    expect(screen.queryByText("Sample data")).toBeNull();
   });
 
   it("says it's loading, or why it couldn't load", () => {

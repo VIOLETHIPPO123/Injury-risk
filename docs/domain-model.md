@@ -33,8 +33,9 @@ Read through the read-only `PlayerRepository` interface and served by
 `PlayerService` (`GET /players`). The implementation, `JpaPlayerRepository`,
 is the `players` table, which `PlayerSyncJob` fills from nflverse every week:
 the players on each team's current depth chart, matched on `gsis_id` (stored,
-not in the JSON), plus one team defense per team with position `DEF`. Snap
-counts are not synced yet, so synced players have 0.
+not in the JSON), plus one team defense per team with position `DEF`. The
+two snap-count columns are recalculated from the player's `WorkloadEntry`
+rows after every workload sync.
 
 ### Team — Implemented
 
@@ -105,14 +106,26 @@ A static, hardcoded grouping of `Team` codes into two conferences (AFC/NFC)
 × four divisions each (East/North/South/West). Not a queryable class or
 API concept — just a lookup table the frontend uses for organization.
 
-### WorkloadEntry — Planned
+### WorkloadEntry — Implemented
 
-Named explicitly in this ticket's scope ("workload entries") but not
-modeled today. `Player` currently stores only two flat snap-count ints
-rather than a per-game history. A real `WorkloadEntry` would likely need:
-`player` (ref), `gameDate`/`week`, `snaps`, `season` — enabling real ACWR
-calculation from actual per-game data instead of two rolling ints, and
-enabling the deferred "historical risk-score trend charts" feature.
+`backend/.../model/WorkloadEntry.java`, table `workload_entries`
+
+| Attribute | Type | Notes |
+|---|---|---|
+| id | Long | Generated; not in the JSON |
+| player | Player | `@ManyToOne` link (column `player_id`, a foreign key to `players`); not in the JSON |
+| playerId | Long | The same `player_id` column, read-only; what the JSON shows |
+| season | int | The year the season started; not in the JSON |
+| week | int | nflverse's week number: 1 to 18, then on through the playoffs |
+| snaps | int | Offense, defense and special teams snaps in that game, added together |
+
+One row per player per week (a unique constraint on player, season and week).
+A week the player didn't play, a bye included, has no row. `WorkloadSyncJob`
+fills the table from nflverse's snap counts every Tuesday after the player
+sync, matching nflverse's `pfr_player_id` to `gsis_id` through its players
+file (`PfrIdMap`), and then sets each player's `snapsLastGame` and
+`snapsLast4Games` from their stored games (`Workload.fromGames`). Served by
+`WorkloadService` at `GET /players/{id}/workload` (the newest season only).
 
 ### Injury — Implemented
 
@@ -171,7 +184,7 @@ eventually need to exist.
 | Division/Conference | Team | 1 → * | Static grouping only, defined in frontend data, not derivable from `Team` itself |
 | Player | WorkloadRatio | 1 → 1 (derived) | Computed per player per request from that player's two snap-count fields |
 | WorkloadRatio | RiskLevel | 1 → 1 (derived) | Pure function of the ratio value; no independent identity |
-| *(planned)* Player | WorkloadEntry | 1 → * | A player would have many workload entries (one per game/week) |
+| Player | WorkloadEntry | 1 → * | Via `WorkloadEntry.player` (`@ManyToOne`, foreign key `workload_entries.player_id`): one entry per game played |
 | Player | Injury | 1 → * | Via `Injury.playerId`; a player can have many injuries over time |
 | *(planned)* Player | RiskScore | 1 → * | If persisted, a player would accumulate a history of scores over time (one per computation), not just one current value |
 | *(planned)* User | Roster | 1 → * or 1 → 1 | Depends on whether multi-roster-per-user is ever needed; MVP likely only needs 1 → 1 |
@@ -188,7 +201,7 @@ flat, unrelated data holders (no shared base class, no polymorphism).
 - **Worth showing as derived/computed nodes** (dashed, not persisted):
   `WorkloadRatio`, `RiskLevel`, `Division`/`Conference`.
 - **Worth sketching as planned/future classes** (clearly marked distinct
-  from the implemented ones): `WorkloadEntry`, a persisted
+  from the implemented ones): a persisted
   `RiskScore`, and the `User`/`League`/`Roster` cluster — the last of
   which represents the largest gap between the product vision in
   `docs/requirements.md` and what's actually implemented today.

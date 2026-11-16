@@ -60,7 +60,7 @@ class PlayerSyncJobTest {
     void newPlayer_isAddedWithNflversesIdNameTeamAndPosition() {
         // Arrange
         nflverseHas(
-            List.of(new NflversePlayer(MAHOMES, "Patrick Mahomes", "QB")),
+            List.of(new NflversePlayer(MAHOMES, "", "Patrick Mahomes", "QB")),
             List.of(new DepthChartEntry(MAHOMES, "KC", "QB", 1)));
 
         // Act
@@ -83,7 +83,7 @@ class PlayerSyncJobTest {
         Player stored = new Player(7L, KELCE, "Travis Kelce", NflTeam.KC, Position.TE, new Workload(50, 200));
         when(playerRepository.findAll()).thenReturn(List.of(stored));
         nflverseHas(
-            List.of(new NflversePlayer(KELCE, "Travis Kelce Sr.", "TE")),
+            List.of(new NflversePlayer(KELCE, "", "Travis Kelce Sr.", "TE")),
             List.of(new DepthChartEntry(KELCE, "LV", "FB", 1)));
 
         // Act
@@ -107,7 +107,7 @@ class PlayerSyncJobTest {
         Player stored = new Player(7L, KELCE, "Travis Kelce", NflTeam.KC, Position.TE, new Workload(50, 200));
         when(playerRepository.findAll()).thenReturn(List.of(stored));
         nflverseHas(
-            List.of(new NflversePlayer(KELCE, "Travis Kelce", "TE")),
+            List.of(new NflversePlayer(KELCE, "", "Travis Kelce", "TE")),
             List.of(new DepthChartEntry(KELCE, "KC", "TE", 1)));
 
         // Act
@@ -124,7 +124,7 @@ class PlayerSyncJobTest {
         Player retired = new Player(7L, KELCE, "Travis Kelce", NflTeam.KC, Position.TE, new Workload(50, 200));
         when(playerRepository.findAll()).thenReturn(List.of(retired));
         nflverseHas(
-            List.of(new NflversePlayer(KELCE, "Travis Kelce", "TE"), new NflversePlayer(MAHOMES, "Patrick Mahomes", "QB")),
+            List.of(new NflversePlayer(KELCE, "", "Travis Kelce", "TE"), new NflversePlayer(MAHOMES, "", "Patrick Mahomes", "QB")),
             List.of(new DepthChartEntry(MAHOMES, "KC", "QB", 1)));
 
         // Act
@@ -140,7 +140,7 @@ class PlayerSyncJobTest {
     void nflversesTeamAndPositionCodes_areMappedToOurs() {
         // Arrange: the Rams are "LA" and a left defensive end is "LDE".
         nflverseHas(
-            List.of(new NflversePlayer("00-1", "Jared Verse", "LB")),
+            List.of(new NflversePlayer("00-1", "", "Jared Verse", "LB")),
             List.of(new DepthChartEntry("00-1", "LA", "LDE", 1)));
 
         // Act
@@ -158,7 +158,7 @@ class PlayerSyncJobTest {
     void playerListedTwice_getsTheListingWhereTheyRankHighest() {
         // Arrange: the backup left tackle starts at left guard.
         nflverseHas(
-            List.of(new NflversePlayer("00-1", "Swing Lineman", "G")),
+            List.of(new NflversePlayer("00-1", "", "Swing Lineman", "G")),
             List.of(new DepthChartEntry("00-1", "ARI", "LT", 2), new DepthChartEntry("00-1", "ARI", "LG", 1)));
 
         // Act
@@ -172,7 +172,7 @@ class PlayerSyncJobTest {
     void returnerAndHolder_keepTheirRealPosition() {
         // Arrange: the punter holds, and the third receiver is the first kick returner.
         nflverseHas(
-            List.of(new NflversePlayer("00-1", "Punter", "P"), new NflversePlayer("00-2", "Receiver", "WR")),
+            List.of(new NflversePlayer("00-1", "", "Punter", "P"), new NflversePlayer("00-2", "", "Receiver", "WR")),
             List.of(
                 new DepthChartEntry("00-1", "SEA", "H", 1), new DepthChartEntry("00-1", "SEA", "P", 1),
                 new DepthChartEntry("00-2", "SEA", "KR", 1), new DepthChartEntry("00-2", "SEA", "WR", 3)));
@@ -188,7 +188,7 @@ class PlayerSyncJobTest {
     void playerWhoOnlyReturnsKicks_isAKickReturner() {
         // Arrange
         nflverseHas(
-            List.of(new NflversePlayer("00-1", "Return Specialist", "WR")),
+            List.of(new NflversePlayer("00-1", "", "Return Specialist", "WR")),
             List.of(new DepthChartEntry("00-1", "SEA", "KR", 1), new DepthChartEntry("00-1", "SEA", "PR", 2)));
 
         // Act
@@ -204,7 +204,7 @@ class PlayerSyncJobTest {
     void depthChartPositionWeCantMap_fallsBackToThePlayersFile() {
         // Arrange: a depth chart code we've never seen, but the players file says DE.
         nflverseHas(
-            List.of(new NflversePlayer("00-1", "Edge Rusher", "DE")),
+            List.of(new NflversePlayer("00-1", "", "Edge Rusher", "DE")),
             List.of(new DepthChartEntry("00-1", "DAL", "EDGE", 1)));
 
         // Act
@@ -218,7 +218,7 @@ class PlayerSyncJobTest {
     void positionWeCantMapAtAll_isSkipped_andTheRestAreStillSaved() {
         // Arrange: "EDGE" is unknown and "OT" doesn't say left or right.
         nflverseHas(
-            List.of(new NflversePlayer("00-1", "Mystery Tackle", "OT"), new NflversePlayer(MAHOMES, "Patrick Mahomes", "QB")),
+            List.of(new NflversePlayer("00-1", "", "Mystery Tackle", "OT"), new NflversePlayer(MAHOMES, "", "Patrick Mahomes", "QB")),
             List.of(new DepthChartEntry("00-1", "DAL", "EDGE", 1), new DepthChartEntry(MAHOMES, "KC", "QB", 1)));
 
         // Act
@@ -233,7 +233,7 @@ class PlayerSyncJobTest {
     void unknownTeam_isSkipped() {
         // Arrange
         nflverseHas(
-            List.of(new NflversePlayer("00-1", "London Player", "QB")),
+            List.of(new NflversePlayer("00-1", "", "London Player", "QB")),
             List.of(new DepthChartEntry("00-1", "LON", "QB", 1)));
 
         // Act
@@ -248,7 +248,7 @@ class PlayerSyncJobTest {
     void depthChartRowsWithNoIdOrAnIdThePlayersFileLacks_areSkipped() {
         // Arrange: without a gsis_id there is nothing to match the player on next week.
         nflverseHas(
-            List.of(new NflversePlayer(MAHOMES, "Patrick Mahomes", "QB")),
+            List.of(new NflversePlayer(MAHOMES, "", "Patrick Mahomes", "QB")),
             List.of(
                 new DepthChartEntry("", "KC", "WR", 4),
                 new DepthChartEntry("00-9999999", "KC", "WR", 5),
@@ -269,7 +269,7 @@ class PlayerSyncJobTest {
         // Arrange
         when(playerRepository.findByPosition("DEF")).thenReturn(List.of());
         nflverseHas(
-            List.of(new NflversePlayer(MAHOMES, "Patrick Mahomes", "QB")),
+            List.of(new NflversePlayer(MAHOMES, "", "Patrick Mahomes", "QB")),
             List.of(new DepthChartEntry(MAHOMES, "KC", "QB", 1)));
 
         // Act
@@ -292,7 +292,7 @@ class PlayerSyncJobTest {
             .filter(team -> team != NflTeam.ARI && team != NflTeam.BUF)
             .map(Player::teamDefense).toList());
         nflverseHas(
-            List.of(new NflversePlayer(MAHOMES, "Patrick Mahomes", "QB")),
+            List.of(new NflversePlayer(MAHOMES, "", "Patrick Mahomes", "QB")),
             List.of(new DepthChartEntry(MAHOMES, "KC", "QB", 1)));
 
         // Act
@@ -319,26 +319,10 @@ class PlayerSyncJobTest {
     @Test
     void emptyDepthChart_throws_andSavesNothing() {
         // Arrange
-        nflverseHas(List.of(new NflversePlayer(MAHOMES, "Patrick Mahomes", "QB")), List.of());
+        nflverseHas(List.of(new NflversePlayer(MAHOMES, "", "Patrick Mahomes", "QB")), List.of());
 
         // Act + Assert
         assertThrows(NflverseUnavailableException.class, job::sync);
         verify(playerRepository, never()).saveAll(any());
-    }
-
-    @Test
-    void weeklyRun_syncs_andAFailureDoesntEscapeTheScheduler() {
-        // Arrange: the first run works, the second finds nflverse down.
-        when(nflverse.players())
-            .thenReturn(List.of(new NflversePlayer(MAHOMES, "Patrick Mahomes", "QB")))
-            .thenThrow(new NflverseUnavailableException("down"));
-        when(nflverse.latestDepthChart()).thenReturn(List.of(new DepthChartEntry(MAHOMES, "KC", "QB", 1)));
-
-        // Act
-        job.runWeekly();
-        assertDoesNotThrow(job::runWeekly);
-
-        // Assert
-        assertEquals("Patrick Mahomes", onlySaved().getName());
     }
 }
