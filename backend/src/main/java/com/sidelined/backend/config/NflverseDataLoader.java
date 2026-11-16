@@ -1,7 +1,9 @@
 package com.sidelined.backend.config;
 
+import com.sidelined.backend.repository.InjuryReportRepository;
 import com.sidelined.backend.repository.JpaPlayerRepository;
 import com.sidelined.backend.repository.JpaWorkloadRepository;
+import com.sidelined.backend.service.InjuryReportSyncJob;
 import com.sidelined.backend.service.PlayerSyncJob;
 import com.sidelined.backend.service.WorkloadSyncJob;
 import org.slf4j.Logger;
@@ -11,10 +13,10 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-// At startup, fills the players table and then the workload_entries table from nflverse, each
-// only if it is empty, so a new database doesn't wait until Tuesday for its first data. A
-// table that has rows is left to the weekly job. Players go first: snaps can only be stored
-// for players that exist. Turned off in tests (nflverse.sync-on-startup=false), which must not
+// At startup, fills the players, workload_entries and injury_reports tables from nflverse, in
+// that order and each only if it is empty, so a new database doesn't wait for the scheduled
+// jobs. A table that has rows is left to its job. Players go first: snaps and injury reports
+// can only be stored for players that exist. Turned off in tests (nflverse.sync-on-startup=false), which must not
 // download anything.
 @Component
 @ConditionalOnProperty(name = "nflverse.sync-on-startup", havingValue = "true", matchIfMissing = true)
@@ -26,13 +28,18 @@ public class NflverseDataLoader implements ApplicationRunner {
     private final JpaWorkloadRepository workloadRepository;
     private final PlayerSyncJob playerSyncJob;
     private final WorkloadSyncJob workloadSyncJob;
+    private final InjuryReportRepository injuryReportRepository;
+    private final InjuryReportSyncJob injuryReportSyncJob;
 
     public NflverseDataLoader(JpaPlayerRepository playerRepository, JpaWorkloadRepository workloadRepository,
-                              PlayerSyncJob playerSyncJob, WorkloadSyncJob workloadSyncJob) {
+                              PlayerSyncJob playerSyncJob, WorkloadSyncJob workloadSyncJob,
+                              InjuryReportRepository injuryReportRepository, InjuryReportSyncJob injuryReportSyncJob) {
         this.playerRepository = playerRepository;
         this.workloadRepository = workloadRepository;
         this.playerSyncJob = playerSyncJob;
         this.workloadSyncJob = workloadSyncJob;
+        this.injuryReportRepository = injuryReportRepository;
+        this.injuryReportSyncJob = injuryReportSyncJob;
     }
 
     // nflverse being down must not stop the app from starting.
@@ -50,6 +57,13 @@ public class NflverseDataLoader implements ApplicationRunner {
                 workloadSyncJob.sync();
             } catch (RuntimeException e) {
                 log.error("Couldn't load snap counts from nflverse at startup; the table is still empty", e);
+            }
+        }
+        if (injuryReportRepository.count() == 0) {
+            try {
+                injuryReportSyncJob.sync();
+            } catch (RuntimeException e) {
+                log.error("Couldn't load injury reports from nflverse at startup; the table is still empty", e);
             }
         }
     }

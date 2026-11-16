@@ -54,6 +54,12 @@ signed-in non-admin gets 403 and a request with no token gets 401.
 Table Editor open `profiles`, find the row whose `id` is the user's id (Authentication > Users lists them by
 email) and change `role` from `USER` to `ADMIN`. Reload the app to see the button.
 
+`InjuryReportSyncJob` loads nflverse's weekly NFL injury reports for the current season and the two before it into
+`injury_reports` (one row per player per week: injury, game status, practice status). It runs every day at 2am
+Central, and at startup (after the players) if the table is empty; that first load is about 15,000 rows. Reports
+are matched to players on `gsis_id`. Reports for players not in `players` (mostly ones no longer on a depth chart)
+aren't stored; each run logs how many there were.
+
 Tests and GitHub Actions don't need any of this: `./mvnw test` uses an in-memory H2 database
 (the `test` profile in `backend/src/test/resources/application-test.properties`).
 

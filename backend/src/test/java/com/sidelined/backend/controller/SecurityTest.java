@@ -7,6 +7,7 @@ import com.sidelined.backend.model.Profile;
 import com.sidelined.backend.model.Role;
 import com.sidelined.backend.model.Workload;
 import com.sidelined.backend.model.Credentials;
+import com.sidelined.backend.repository.InjuryReportRepository;
 import com.sidelined.backend.repository.JpaPlayerRepository;
 import com.sidelined.backend.repository.ProfileRepository;
 import com.sidelined.backend.service.ProfileService;
@@ -68,6 +69,7 @@ class SecurityTest {
     @Autowired private MockMvc mvc;
     @Autowired private ProfileRepository profileRepository;
     @Autowired private JpaPlayerRepository playerRepository;
+    @Autowired private InjuryReportRepository injuryReportRepository;
 
     @MockitoBean private SupabaseAuthClient supabaseAuthClient;
     // Only reached by a raw "Bearer ..." header; jwt() skips decoding.
@@ -119,6 +121,26 @@ class SecurityTest {
             .andExpect(status().isNotFound());
 
         assertEquals("Read Only", playerRepository.findById(playerId).orElseThrow().getName());
+    }
+
+    @Test
+    void injuryReports_cantBeAddedChangedOrDeletedThroughTheApi_evenWithAToken() throws Exception {
+        // Injury reports only come from the nflverse sync job (InjuryReportSyncJob).
+        Long playerId = playerRepository.save(
+            new Player(null, "Report Test", NflTeam.ARI, Position.QB, new Workload(10, 40))).getId();
+        String body = "{\"playerId\":" + playerId + ",\"season\":2026,\"week\":1,\"gameStatus\":\"Out\"}";
+        long before = injuryReportRepository.count();
+
+        for (String path : List.of("/injury-reports", "/injury-reports/1", "/players/" + playerId + "/injuries")) {
+            mvc.perform(post(path).with(tokenFor(newUserId())).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().is4xxClientError());
+            mvc.perform(put(path).with(tokenFor(newUserId())).contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().is4xxClientError());
+            mvc.perform(delete(path).with(tokenFor(newUserId())))
+                .andExpect(status().is4xxClientError());
+        }
+
+        assertEquals(before, injuryReportRepository.count());
     }
 
     @Test

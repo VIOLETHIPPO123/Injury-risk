@@ -150,6 +150,25 @@ for real players. Served by `InjuryService` at `GET /players/{id}/injuries`,
 newest first; an unknown player is a 404, a player with no injuries an empty
 list. Planned: an external-API-backed implementation.
 
+### InjuryReport — Implemented
+
+`backend/.../model/InjuryReport.java`, table `injury_reports`
+
+| Attribute | Type | Notes |
+|---|---|---|
+| id | Long | Assigned by the database (sequence `injury_reports_seq`) |
+| player | Player | `@ManyToOne` link (column `player_id`, a foreign key to `players`) |
+| season | int | e.g. 2026 |
+| week | int | 1–18 regular season, 19–22 playoffs |
+| primaryInjury | String | NFL free text, e.g. `"Knee"`; may be null |
+| secondaryInjury | String | May be null |
+| gameStatus | String | `Out`, `Doubtful`, `Questionable`; null if only on the practice report |
+| practiceStatus | String | e.g. `"Limited Participation in Practice"` |
+
+The raw weekly injury reports, unique per (`player_id`, `season`, `week`).
+Filled daily by `InjuryReportSyncJob` from nflverse, matched to players on
+`gsis_id`; not exposed by the API. Not yet connected to `Injury` above.
+
 ### RiskScore — Planned (as a first-class, persisted concept)
 
 Currently only exists as the **derived** `RiskLevel` above — computed
@@ -186,6 +205,7 @@ eventually need to exist.
 | WorkloadRatio | RiskLevel | 1 → 1 (derived) | Pure function of the ratio value; no independent identity |
 | Player | WorkloadEntry | 1 → * | Via `WorkloadEntry.player` (`@ManyToOne`, foreign key `workload_entries.player_id`): one entry per game played |
 | Player | Injury | 1 → * | Via `Injury.playerId`; a player can have many injuries over time |
+| Player | InjuryReport | 1 → * | Via `InjuryReport.player` (`@ManyToOne`, foreign key `injury_reports.player_id`): at most one per week |
 | *(planned)* Player | RiskScore | 1 → * | If persisted, a player would accumulate a history of scores over time (one per computation), not just one current value |
 | *(planned)* User | Roster | 1 → * or 1 → 1 | Depends on whether multi-roster-per-user is ever needed; MVP likely only needs 1 → 1 |
 | *(planned)* Roster | Player | * → * | A roster holds many players; a player (league-wide pool) isn't exclusive to one roster's *data*, though typically exclusive to one manager's *claim* within a league |

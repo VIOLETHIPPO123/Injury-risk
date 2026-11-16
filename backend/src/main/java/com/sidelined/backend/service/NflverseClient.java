@@ -1,6 +1,8 @@
 package com.sidelined.backend.service;
 
 import com.sidelined.backend.exception.NflverseUnavailableException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -24,6 +26,8 @@ import java.util.function.IntFunction;
 // It hands back the rows as nflverse writes them; the sync jobs decide what they mean.
 @Service
 public class NflverseClient {
+
+    private static final Logger log = LoggerFactory.getLogger(NflverseClient.class);
 
     private final RestClient restClient;
     private final Clock clock;
@@ -124,6 +128,52 @@ public class NflverseClient {
             }
             return entries;
         });
+    }
+
+    // One season's weekly injury reports, regular season and playoffs (weeks 19 to 22). Empty if
+    // nflverse has no file for that season yet. The game report's injury is used, or if the
+    // player is only on the practice report (no game status), the practice report's. A row
+    // whose season or week isn't a number is logged and left out.
+    public Optional<List<NflverseInjuryReport>> injuryReports(int season) {
+        String path = "/injuries/injuries_" + season + ".csv";
+        return download(path, csv -> {
+            List<NflverseInjuryReport> reports = new ArrayList<>();
+            for (CsvReader.Row row = csv.next(); row != null; row = csv.next()) {
+                Integer rowSeason = number(row.get("season"));
+                Integer week = number(row.get("week"));
+                if (rowSeason == null || week == null) {
+                    log.warn("Skipping a row of {} with season \"{}\" and week \"{}\"",
+                        path, row.get("season"), row.get("week"));
+                    continue;
+                }
+                boolean onGameReport = blankToNull(row.get("report_primary_injury")) != null;
+                String injurySource = onGameReport ? "report" : "practice";
+                reports.add(new NflverseInjuryReport(
+                    row.get("gsis_id").trim(),
+                    rowSeason,
+                    week,
+                    blankToNull(row.get(injurySource + "_primary_injury")),
+                    blankToNull(row.get(injurySource + "_secondary_injury")),
+                    blankToNull(row.get("report_status")),
+                    blankToNull(row.get("practice_status")),
+                    blankToNull(row.getIfPresent("date_modified"))));
+            }
+            return reports;
+        });
+    }
+
+    // nflverse leaves some values as just whitespace (a line break and spaces).
+    private static String blankToNull(String text) {
+        String trimmed = text.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static Integer number(String text) {
+        try {
+            return Integer.parseInt(text.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     // A rank that isn't a number sorts behind every real one.
