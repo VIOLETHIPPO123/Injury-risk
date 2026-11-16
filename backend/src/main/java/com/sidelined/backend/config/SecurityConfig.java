@@ -30,7 +30,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.GET,
                     "/players", "/players/*/injuries", "/players/*/workload",
-                    "/teams", "/roster/formats").permitAll()
+                    "/teams", "/roster/formats", "/auth/google").permitAll()
                 .requestMatchers(HttpMethod.POST, "/auth/signup", "/auth/signin").permitAll()
                 // Lets error responses (e.g. a 400 for a bad path variable) through unchanged
                 // instead of turning them into 401s.
