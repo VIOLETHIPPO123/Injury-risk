@@ -48,8 +48,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Import(SecurityTest.AdminOnlyController.class)
 class SecurityTest {
 
-    // An endpoint that only uses the shared admin check, so the check can be tested over HTTP
-    // before any real admin endpoint exists (DEV-104).
+    // An endpoint that only uses the shared admin check, so the check is tested over HTTP on
+    // its own. The real admin endpoint has its own tests in AdminControllerTest.
     @RestController
     static class AdminOnlyController {
         private final ProfileService profileService;

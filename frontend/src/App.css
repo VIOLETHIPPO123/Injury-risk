@@ -29,6 +29,14 @@
   background: #b91c1c1f;
 }
 
+/* How the admin's last "Refresh player data" went, when it worked. */
+.refresh-result {
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: var(--accent);
+  background: var(--accent-bg);
+}
+
 /* Sign in / Sign out, top right under the header. */
 .account-bar {
   display: flex;
@@ -46,6 +54,11 @@
     color: var(--accent);
     background: var(--accent-bg);
     cursor: pointer;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: progress;
+    }
   }
 }
 

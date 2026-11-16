@@ -46,6 +46,14 @@ Right after it, `WorkloadSyncJob` loads the current season's snap counts from nf
 startup if its table is empty; that first load is about 12,000 rows, so allow it a minute or two. A player needs
 four games before they have an ACWR, on the player page and on the trend chart alike.
 
+An admin can run both jobs at any time with the **Refresh player data** button next to Sign out, which calls
+`POST /admin/players/refresh`. The button only shows for an admin, and the endpoint checks the role itself: a
+signed-in non-admin gets 403 and a request with no token gets 401.
+
+**Making an account an admin:** sign in with it once (that creates its `profiles` row), then in the Supabase
+Table Editor open `profiles`, find the row whose `id` is the user's id (Authentication > Users lists them by
+email) and change `role` from `USER` to `ADMIN`. Reload the app to see the button.
+
 Tests and GitHub Actions don't need any of this: `./mvnw test` uses an in-memory H2 database
 (the `test` profile in `backend/src/test/resources/application-test.properties`).
 

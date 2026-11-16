@@ -46,7 +46,7 @@ public class WorkloadSyncJob {
     }
 
     // Run every Tuesday after the player sync (WeeklyNflverseSync), at startup when the table
-    // is empty (NflverseDataLoader), and by admins on demand. One run at a time, so two can't
+    // is empty (NflverseDataLoader), and by admins on demand (AdminController). One run at a time, so two can't
     // both add the same game. Throws NflverseUnavailableException, changing nothing, if a
     // download fails.
     public synchronized Result sync() {
