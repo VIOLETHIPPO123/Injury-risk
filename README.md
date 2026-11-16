@@ -39,8 +39,12 @@ uses it any more, `drop table roster_settings;`.
 The `players` table is filled from [nflverse](https://github.com/nflverse/nflverse-data) by `PlayerSyncJob`:
 everyone on a team's current depth chart, plus one `DEF` row per team. It runs every Tuesday at 2pm Central,
 and at startup if the table is empty (the first start takes a few seconds longer and needs internet access).
-Players are matched on `gsis_id`, so a run updates rows in place and never changes an id. Snap counts aren't
-in those nflverse files, so new players start at 0.
+Players are matched on `gsis_id`, so a run updates rows in place and never changes an id.
+
+Right after it, `WorkloadSyncJob` loads the current season's snap counts from nflverse into `workload_entries`
+(one row per player per week) and recalculates every player's two snap-count columns from them. It too runs at
+startup if its table is empty; that first load is about 12,000 rows, so allow it a minute or two. A player needs
+four games before they have an ACWR, on the player page and on the trend chart alike.
 
 Tests and GitHub Actions don't need any of this: `./mvnw test` uses an in-memory H2 database
 (the `test` profile in `backend/src/test/resources/application-test.properties`).

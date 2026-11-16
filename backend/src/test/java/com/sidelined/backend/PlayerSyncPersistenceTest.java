@@ -53,7 +53,7 @@ class PlayerSyncPersistenceTest {
 
     private void nflverseHasAllenAndCook() {
         nflverseHas(
-            List.of(new NflversePlayer(ALLEN, "Josh Allen", "QB"), new NflversePlayer(COOK, "James Cook", "RB")),
+            List.of(new NflversePlayer(ALLEN, "", "Josh Allen", "QB"), new NflversePlayer(COOK, "", "James Cook", "RB")),
             List.of(new DepthChartEntry(ALLEN, "BUF", "QB", 1), new DepthChartEntry(COOK, "BUF", "RB", 1)));
     }
 
@@ -92,8 +92,8 @@ class PlayerSyncPersistenceTest {
 
         // Act: next week Cook has been traded to Miami and a rookie has appeared.
         nflverseHas(
-            List.of(new NflversePlayer(ALLEN, "Josh Allen", "QB"), new NflversePlayer(COOK, "James Cook III", "RB"),
-                new NflversePlayer(NEWCOMER, "New Comer", "K")),
+            List.of(new NflversePlayer(ALLEN, "", "Josh Allen", "QB"), new NflversePlayer(COOK, "", "James Cook III", "RB"),
+                new NflversePlayer(NEWCOMER, "", "New Comer", "K")),
             List.of(new DepthChartEntry(ALLEN, "BUF", "QB", 1), new DepthChartEntry(COOK, "MIA", "RB", 2),
                 new DepthChartEntry(NEWCOMER, "BUF", "PK", 1)));
         PlayerSyncJob.Result result = job.sync();

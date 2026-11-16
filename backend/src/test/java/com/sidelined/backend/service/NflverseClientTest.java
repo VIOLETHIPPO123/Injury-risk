@@ -26,6 +26,10 @@ class NflverseClientTest {
     private static final String CHART_2025_URL = BASE + "/depth_charts/depth_charts_2025.csv";
     private static final MediaType CSV = MediaType.parseMediaType("text/csv");
 
+    private static final String SNAPS_2026_URL = BASE + "/snap_counts/snap_counts_2026.csv";
+    private static final String SNAPS_HEADER = "game_id,pfr_game_id,season,game_type,week,player,pfr_player_id,"
+        + "position,team,opponent,offense_snaps,offense_pct,defense_snaps,defense_pct,st_snaps,st_pct\n";
+
     private static final String CHART_HEADER =
         "dt,team,player_name,espn_id,gsis_id,pos_grp_id,pos_grp,pos_id,pos_name,pos_abb,pos_slot,pos_rank\n";
 
@@ -37,11 +41,11 @@ class NflverseClientTest {
     // ---------- Players ----------
 
     @Test
-    void players_readsIdNameAndPosition_pastQuotedColumnsWithCommas() {
-        // Arrange
-        String csv = "gsis_id,display_name,first_name,position_group,position,headshot,latest_team,status\n"
-            + "00-0038389,Israel Abanikanda,Israel,RB,RB,\"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/x\",DAL,ACT\n"
-            + "00-0033873,Patrick Mahomes,Patrick,QB,QB,,KC,ACT\n";
+    void players_readsBothIdsNameAndPosition_pastQuotedColumnsWithCommas() {
+        // Arrange: the second player has no Pro Football Reference id.
+        String csv = "gsis_id,display_name,first_name,pfr_id,position_group,position,headshot,latest_team,status\n"
+            + "00-0038389,Israel Abanikanda,Israel,AbanIs00,RB,RB,\"https://static.www.nfl.com/image/upload/f_auto,q_auto/league/x\",DAL,ACT\n"
+            + "00-0033873,Patrick Mahomes,Patrick,,QB,QB,,KC,ACT\n";
         nflverse.expect(requestTo(PLAYERS_URL)).andRespond(withSuccess(csv, CSV));
 
         // Act
@@ -50,8 +54,8 @@ class NflverseClientTest {
         // Assert
         nflverse.verify();
         assertEquals(List.of(
-            new NflversePlayer("00-0038389", "Israel Abanikanda", "RB"),
-            new NflversePlayer("00-0033873", "Patrick Mahomes", "QB")), players);
+            new NflversePlayer("00-0038389", "AbanIs00", "Israel Abanikanda", "RB"),
+            new NflversePlayer("00-0033873", "", "Patrick Mahomes", "QB")), players);
     }
 
     @Test
@@ -79,7 +83,7 @@ class NflverseClientTest {
     void players_fileWithoutAColumnWeRead_throws() {
         // nflverse renamed display_name.
         nflverse.expect(requestTo(PLAYERS_URL))
-            .andRespond(withSuccess("gsis_id,full_name,position\n00-0033873,Patrick Mahomes,QB\n", CSV));
+            .andRespond(withSuccess("gsis_id,pfr_id,full_name,position\n00-0033873,MahoPa00,Patrick Mahomes,QB\n", CSV));
 
         assertThrows(NflverseUnavailableException.class, client::players);
     }
@@ -139,5 +143,59 @@ class NflverseClientTest {
             + "2026-11-15T14:41:31Z,KC,Patrick Mahomes,3139477,00-0033873,21,3WR 1TE,8,Quarterback,QB,5,NA\n", CSV));
 
         assertEquals(Integer.MAX_VALUE, client.latestDepthChart().get(0).rank());
+    }
+
+    // ---------- Snap counts ----------
+
+    @Test
+    void snapCounts_addsOffenseDefenseAndSpecialTeams_forEveryGameInTheFile() {
+        // Arrange: a lineman who also blocks on kicks, a quarterback, and a playoff game.
+        String csv = SNAPS_HEADER
+            + "2026_01_ARI_LAC,202609130sdg,2026,REG,1,Cole Strange,StraCo01,G,LAC,ARI,55,1,0,0,2,0.08\n"
+            + "2026_02_IND_KC,202609200kan,2026,REG,2,Patrick Mahomes,MahoPa00,QB,KC,IND,80,1,0,0,0,0\n"
+            + "2026_19_BUF_KC,202701160kan,2026,WC,19,Patrick Mahomes,MahoPa00,QB,KC,BUF,71.0,1,,0,0,0\n";
+        nflverse.expect(requestTo(SNAPS_2026_URL)).andRespond(withSuccess(csv, CSV));
+
+        // Act
+        List<SnapCount> snapCounts = client.snapCounts();
+
+        // Assert
+        nflverse.verify();
+        assertEquals(List.of(
+            new SnapCount("StraCo01", "Cole Strange", 2026, 1, 57),
+            new SnapCount("MahoPa00", "Patrick Mahomes", 2026, 2, 80),
+            new SnapCount("MahoPa00", "Patrick Mahomes", 2026, 19, 71)), snapCounts);
+    }
+
+    @Test
+    void snapCounts_noFileForThisYearYet_usesLastYears() {
+        // Arrange: the playoffs in January belong to the season that started last year.
+        Clock january2027 = Clock.fixed(Instant.parse("2027-01-19T20:00:00Z"), ZoneOffset.UTC);
+        NflverseClient januaryClient = new NflverseClient(builder, BASE, january2027);
+        nflverse.expect(requestTo(BASE + "/snap_counts/snap_counts_2027.csv")).andRespond(withResourceNotFound());
+        nflverse.expect(requestTo(SNAPS_2026_URL)).andRespond(withSuccess(SNAPS_HEADER
+            + "2026_19_BUF_KC,202701160kan,2026,WC,19,Patrick Mahomes,MahoPa00,QB,KC,BUF,71,1,0,0,0,0\n", CSV));
+
+        // Act
+        List<SnapCount> snapCounts = januaryClient.snapCounts();
+
+        // Assert
+        nflverse.verify();
+        assertEquals(List.of(new SnapCount("MahoPa00", "Patrick Mahomes", 2026, 19, 71)), snapCounts);
+    }
+
+    @Test
+    void snapCounts_aCountThatIsntANumber_throws() {
+        nflverse.expect(requestTo(SNAPS_2026_URL)).andRespond(withSuccess(SNAPS_HEADER
+            + "2026_02_IND_KC,202609200kan,2026,REG,2,Patrick Mahomes,MahoPa00,QB,KC,IND,lots,1,0,0,0,0\n", CSV));
+
+        assertThrows(NflverseUnavailableException.class, client::snapCounts);
+    }
+
+    @Test
+    void snapCounts_fileWithOnlyAHeader_isEmpty() {
+        nflverse.expect(requestTo(SNAPS_2026_URL)).andRespond(withSuccess(SNAPS_HEADER, CSV));
+
+        assertTrue(client.snapCounts().isEmpty());
     }
 }

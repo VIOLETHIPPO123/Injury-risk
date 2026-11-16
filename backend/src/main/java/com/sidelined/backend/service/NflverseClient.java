@@ -18,9 +18,10 @@ import java.time.Year;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.IntFunction;
 
 // The only code that downloads from nflverse (CSV files attached to its GitHub releases).
-// It hands back the rows as nflverse writes them; PlayerSyncJob decides what they mean.
+// It hands back the rows as nflverse writes them; the sync jobs decide what they mean.
 @Service
 public class NflverseClient {
 
@@ -56,22 +57,51 @@ public class NflverseClient {
         return download(path, csv -> {
             List<NflversePlayer> players = new ArrayList<>();
             for (CsvReader.Row row = csv.next(); row != null; row = csv.next()) {
-                players.add(new NflversePlayer(
-                    row.get("gsis_id"), row.get("display_name"), row.get("position")));
+                players.add(new NflversePlayer(row.get("gsis_id"), row.get("pfr_id"),
+                    row.get("display_name"), row.get("position")));
             }
             return players;
         }).orElseThrow(() -> new NflverseUnavailableException("nflverse has no " + path));
     }
 
-    // Every team's depth chart as of nflverse's newest snapshot. There is one file per season,
-    // and next season's file doesn't exist until around March, so a missing file for this
-    // year means last year's is still the current one.
+    // Every team's depth chart as of nflverse's newest snapshot.
     public List<DepthChartEntry> latestDepthChart() {
+        return currentSeason("depth chart", this::depthChart);
+    }
+
+    // Every player's snaps in every game of the current season so far, playoffs included.
+    public List<SnapCount> snapCounts() {
+        return currentSeason("snap counts", this::snapCounts);
+    }
+
+    // nflverse keeps one file per season, named for the year the season started, and next
+    // season's doesn't exist until that season is near (March for depth charts, September for
+    // snap counts). So a missing file for this year means last year's is still the current one.
+    private <T> T currentSeason(String what, IntFunction<Optional<T>> fileForSeason) {
         int year = Year.now(clock).getValue();
-        return depthChart(year)
-            .or(() -> depthChart(year - 1))
+        return fileForSeason.apply(year)
+            .or(() -> fileForSeason.apply(year - 1))
             .orElseThrow(() -> new NflverseUnavailableException(
-                "nflverse has no depth chart for " + year + " or " + (year - 1)));
+                "nflverse has no " + what + " for " + year + " or " + (year - 1)));
+    }
+
+    private Optional<List<SnapCount>> snapCounts(int season) {
+        return download("/snap_counts/snap_counts_" + season + ".csv", csv -> {
+            List<SnapCount> snapCounts = new ArrayList<>();
+            for (CsvReader.Row row = csv.next(); row != null; row = csv.next()) {
+                int snaps = count(row.get("offense_snaps")) + count(row.get("defense_snaps"))
+                    + count(row.get("st_snaps"));
+                snapCounts.add(new SnapCount(row.get("pfr_player_id"), row.get("player"),
+                    count(row.get("season")), count(row.get("week")), snaps));
+            }
+            return snapCounts;
+        });
+    }
+
+    // A whole number, which nflverse sometimes writes with a decimal point ("55.0"). Blank is 0.
+    // Anything else isn't a count, and fails the download rather than being guessed at.
+    private static int count(String text) {
+        return text.isBlank() ? 0 : (int) Double.parseDouble(text.trim());
     }
 
     // The file holds a snapshot of all 32 teams for every day of the season, newest first,
@@ -125,8 +155,8 @@ public class NflverseClient {
             });
         } catch (RestClientException e) {
             throw new NflverseUnavailableException("Couldn't download " + path + " from nflverse", e);
-        } catch (IllegalStateException e) {
-            // A column we read is gone: nflverse changed the file's format.
+        } catch (IllegalStateException | NumberFormatException e) {
+            // A column we read is gone or isn't a number any more: nflverse changed the file's format.
             throw new NflverseUnavailableException(path + " isn't in the expected format: " + e.getMessage(), e);
         }
     }

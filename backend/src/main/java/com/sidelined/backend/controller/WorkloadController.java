@@ -14,7 +14,7 @@ public class WorkloadController {
         this.workloadService = workloadService;
     }
 
-    // A player's games so far, in week order. A bye week has no entry.
+    // A player's games this season, in week order. A week they didn't play has no entry.
     @GetMapping("/players/{playerId}/workload")
     public List<WorkloadEntry> getWorkload(@PathVariable Long playerId) {
         return workloadService.getWorkload(playerId);
