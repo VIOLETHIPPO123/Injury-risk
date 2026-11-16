@@ -1,6 +1,7 @@
 package com.sidelined.backend.controller;
 
 import com.sidelined.backend.exception.AuthServiceUnavailableException;
+import com.sidelined.backend.exception.NflverseUnavailableException;
 import com.sidelined.backend.exception.NotAdminException;
 import com.sidelined.backend.exception.NotFantasyEligibleException;
 import com.sidelined.backend.exception.PlayerNotFoundException;
@@ -37,9 +38,10 @@ public class ApiExceptionHandler {
         return Map.of("error", ex.getMessage());
     }
 
-    @ExceptionHandler(AuthServiceUnavailableException.class)
+    // A service we depend on (Supabase Auth, nflverse) couldn't be reached or answered badly.
+    @ExceptionHandler({AuthServiceUnavailableException.class, NflverseUnavailableException.class})
     @ResponseStatus(HttpStatus.BAD_GATEWAY)
-    public Map<String, String> handleAuthServiceUnavailable(RuntimeException ex) {
+    public Map<String, String> handleUpstreamUnavailable(RuntimeException ex) {
         return Map.of("error", ex.getMessage());
     }
 
